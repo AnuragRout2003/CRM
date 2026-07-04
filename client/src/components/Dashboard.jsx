@@ -327,7 +327,7 @@ export default function Dashboard() {
                       className="employee-row-clickable"
                       onClick={() => navigate(`/employee/${emp._id}`)}
                     >
-                      <td>
+                      <td data-label="Name">
                         <div className="employee-name-cell">
                           <img
                             src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
@@ -337,7 +337,7 @@ export default function Dashboard() {
                           <span className="employee-name">{emp.name}</span>
                         </div>
                       </td>
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td data-label="Daily Wage" onClick={(e) => e.stopPropagation()}>
                         {editingWage.id === emp._id ? (
                           <input
                             type="number"
@@ -361,18 +361,18 @@ export default function Dashboard() {
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Last Payment">
                         <span className="date-badge">{formatDate(emp.lastPaymentDate)}</span>
                       </td>
-                      <td>
+                      <td data-label="Working Days">
                         <span className="badge badge-cyan">{workingDays} days</span>
                       </td>
-                      <td>
+                      <td data-label="Advance">
                         <span className="payment-amount" style={{ color: advanceAfter > 0 ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
                           {formatCurrency(advanceAfter)}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Remaining">
                         <span
                           className="payment-amount"
                           style={{
@@ -383,8 +383,8 @@ export default function Dashboard() {
                           {formatCurrency(remaining)}
                         </span>
                       </td>
-                      <td>
-                        <div className="calendar-actions" onClick={(e) => e.stopPropagation()} style={{ justifyContent: 'flex-start', gap: '0.5rem' }}>
+                      <td data-label="Today" onClick={(e) => e.stopPropagation()}>
+                        <div className="calendar-actions" style={{ justifyContent: 'flex-start', gap: '0.5rem' }}>
                           <button
                             className="cal-btn cal-present"
                             style={{ opacity: todayStatus === 'present' ? 1 : 0.5, border: todayStatus === 'present' ? '1px solid var(--accent-success)' : '1px solid transparent' }}

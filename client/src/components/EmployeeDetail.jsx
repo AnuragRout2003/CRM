@@ -374,16 +374,16 @@ export default function EmployeeDetail() {
             </thead>
             <tbody>
               <tr>
-                <td className="employee-name">{employee.name}</td>
-                <td><span className="payment-amount">{formatCurrency(employee.dailyWage)}</span></td>
-                <td><span className="date-badge">{formatDate(employee.lastPaymentDate)}</span></td>
-                <td><span className="badge badge-cyan">{daysWorkedThisMonth} days</span></td>
-                <td>
+                <td data-label="Name" className="employee-name">{employee.name}</td>
+                <td data-label="Daily Wage"><span className="payment-amount">{formatCurrency(employee.dailyWage)}</span></td>
+                <td data-label="Last Payment"><span className="date-badge">{formatDate(employee.lastPaymentDate)}</span></td>
+                <td data-label="Days Worked"><span className="badge badge-cyan">{daysWorkedThisMonth} days</span></td>
+                <td data-label="Advance">
                   <span className="payment-amount" style={{ color: advanceAfterLastPayment > 0 ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
                     {formatCurrency(advanceAfterLastPayment)}
                   </span>
                 </td>
-                <td>
+                <td data-label="Remaining Salary">
                   <span className="payment-amount" style={{
                     color: remainingSalary > 0 ? 'var(--accent-success)' : remainingSalary < 0 ? 'var(--accent-danger)' : 'var(--text-muted)',
                     fontWeight: 700, fontSize: '1.05rem',
@@ -398,7 +398,7 @@ export default function EmployeeDetail() {
       </div>
 
       {/* ── Quick Info Cards ── */}
-      <div className="detail-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="detail-grid">
         <div className="detail-item">
           <div className="detail-item-label">Daily Wage</div>
           <div className="detail-item-value cyan">{formatCurrency(employee.dailyWage)}</div>
@@ -420,7 +420,7 @@ export default function EmployeeDetail() {
       </div>
 
       {/* ── Payment & Advance Forms ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+      <div className="forms-grid" style={{ marginBottom: '1.5rem' }}>
         {/* Record Payment */}
         <div className="card">
           <div className="card-header"><h2>💰 Record Payment</h2></div>
@@ -573,7 +573,7 @@ export default function EmployeeDetail() {
       </div>
 
       {/* ── Payment History ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+      <div className="forms-grid">
         <div className="card">
           <div className="card-header">
             <h2>Payment History</h2>
@@ -582,16 +582,18 @@ export default function EmployeeDetail() {
           {employee.payments?.length ? (
             <div className="table-wrapper">
               <table className="table">
-                <thead><tr><th>#</th><th>Date</th><th>Amount</th></tr></thead>
+                <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
                 <tbody>
                   {[...employee.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p, i) => (
                     <tr key={p._id || i}>
-                      <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                      <td>
+                      <td data-label="#" style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
+                      <td data-label="Date">
                         <span className="date-badge">{formatDate(p.date)}</span>
                       </td>
-                      <td>
+                      <td data-label="Amount">
                         <span className="payment-amount positive">{formatCurrency(p.amount)}</span>
+                      </td>
+                      <td data-label="Method">
                         {p.method && <span className={`badge-method ${p.method === 'UPI' ? 'badge-upi' : 'badge-cash'}`}>{p.method}</span>}
                       </td>
                     </tr>
@@ -614,16 +616,18 @@ export default function EmployeeDetail() {
           {employee.advances?.length ? (
             <div className="table-wrapper">
               <table className="table">
-                <thead><tr><th>#</th><th>Date</th><th>Amount</th></tr></thead>
+                <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
                 <tbody>
                   {[...employee.advances].sort((a, b) => new Date(b.date) - new Date(a.date)).map((a, i) => (
                     <tr key={a._id || i}>
-                      <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                      <td>
+                      <td data-label="#" style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
+                      <td data-label="Date">
                         <span className="date-badge">{formatDate(a.date)}</span>
                       </td>
-                      <td>
+                      <td data-label="Amount">
                         <span className="payment-amount" style={{ color: 'var(--accent-warning)' }}>{formatCurrency(a.amount)}</span>
+                      </td>
+                      <td data-label="Method">
                         {a.method && <span className={`badge-method ${a.method === 'UPI' ? 'badge-upi' : 'badge-cash'}`}>{a.method}</span>}
                       </td>
                     </tr>

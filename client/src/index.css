@@ -411,6 +411,50 @@ a {
   border-bottom: none;
 }
 
+/* Mobile Responsive Table (Cards) */
+@media (max-width: 850px) {
+  .table thead {
+    display: none;
+  }
+  
+  .table, .table tbody, .table tr, .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tr {
+    margin-bottom: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.25rem 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    text-align: right;
+  }
+
+  .table td:last-child {
+    border-bottom: none;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    text-align: left;
+    margin-right: 1rem;
+  }
+}
+
 .employee-name {
   font-weight: 600;
   color: var(--text-primary);
@@ -1262,6 +1306,15 @@ select.form-input option {
   .detail-grid {
     grid-template-columns: 1fr !important;
   }
+  .forms-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.forms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
 }
 
 /* ============================================
