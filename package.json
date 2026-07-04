@@ -4,8 +4,9 @@
   "description": "Unified deployment for Rout Plumbing Solutions",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "build": "cd client && npm install && npm run build && cd ../server && npm install"
+    "start": "cd server && node index.js",
+    "postinstall": "cd server && npm install",
+    "build": "cd client && npm install && npm run build"
   },
   "engines": {
     "node": ">=18.0.0"
