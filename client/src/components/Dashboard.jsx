@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
-const API = 'http://localhost:5000/api';
+const API = '/api';
 
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
@@ -330,7 +330,7 @@ export default function Dashboard() {
                       <td>
                         <div className="employee-name-cell">
                           <img
-                            src={emp.profilePicture ? `http://localhost:5000/uploads/${emp.profilePicture}` : ''}
+                            src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
                             alt={emp.name}
                             className="avatar-sm"
                           />

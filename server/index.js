@@ -26,6 +26,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Rout Plumbing Solution API is running' });
 });
 
+// Serve frontend in production
+const clientBuildPath = path.join(__dirname, '../client/dist');
+app.use(express.static(clientBuildPath));
+
+// Catch-all route to serve React's index.html for any other requests (React Router support)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
+
 // Connect to MongoDB and start server
 mongoose
   .connect(process.env.MONGODB_URI)

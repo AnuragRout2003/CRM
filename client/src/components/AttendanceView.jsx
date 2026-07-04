@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
-const API_EMPLOYEES = 'http://localhost:5000/api/employees';
-const API_ATTENDANCE = 'http://localhost:5000/api/attendance';
+const API_EMPLOYEES = '/api/employees';
+const API_ATTENDANCE = '/api/attendance';
 
 export default function AttendanceView() {
   const [employees, setEmployees] = useState([]);
@@ -240,7 +240,7 @@ export default function AttendanceView() {
                     <td style={{ position: 'sticky', left: 0, background: 'var(--bg-card)', zIndex: 9, borderRight: '2px solid var(--border-color)', fontWeight: 600 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {emp.profilePicture ? (
-                          <img src={`http://localhost:5000/uploads/${emp.profilePicture}`} alt={emp.name} className="avatar-sm" style={{ width: '28px', height: '28px' }} />
+                          <img src={`/uploads/${emp.profilePicture}`} alt={emp.name} className="avatar-sm" style={{ width: '28px', height: '28px' }} />
                         ) : (
                           <div className="avatar-sm" style={{ width: '28px', height: '28px', background: 'var(--border-color)' }}></div>
                         )}

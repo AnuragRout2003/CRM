@@ -1,0 +1,15 @@
+{
+  "name": "rout-plumbing-unified",
+  "version": "1.0.0",
+  "description": "Unified deployment for Rout Plumbing Solutions",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "build": "cd client && npm install && npm run build && cd ../server && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Anurag Rout",
+  "license": "ISC"
+}

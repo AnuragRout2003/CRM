@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
+const API = '/api';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -335,7 +335,7 @@ export default function EmployeeDetail() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {employee.profilePicture ? (
             <img
-              src={`http://localhost:5000/uploads/${employee.profilePicture}`}
+              src={`/uploads/${employee.profilePicture}`}
               alt={employee.name}
               style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)' }}
             />

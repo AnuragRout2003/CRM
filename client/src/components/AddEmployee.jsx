@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api/employees';
+const API = '/api/employees';
 
 export default function AddEmployee() {
   const navigate = useNavigate();
