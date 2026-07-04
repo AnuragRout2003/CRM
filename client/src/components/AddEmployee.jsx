@@ -76,42 +76,68 @@ export default function AddEmployee() {
   };
 
   return (
-    <div className="main-content">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      {/* Toast */}
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.message}</div>
         </div>
       )}
 
-      <button className="back-link" onClick={() => navigate('/')}>
+      {/* Back Button */}
+      <button
+        className="mb-6 inline-flex items-center gap-1.5 rounded-lg bg-white px-4 min-h-[44px] text-sm font-medium text-slate-600 shadow-sm border border-slate-200 hover:bg-slate-50 hover:text-sky-600 transition-all duration-200 active:scale-95"
+        onClick={() => navigate('/')}
+      >
         ← Back to Dashboard
       </button>
 
-      <div className="page-header">
-        <h1>Add New Employee</h1>
-        <p>Enter employee details to start tracking</p>
+      {/* Page Header */}
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">
+          Add New Employee
+        </h1>
+        <p className="mt-1.5 text-sm text-slate-500">
+          Enter employee details to start tracking
+        </p>
       </div>
 
-      <div className="card" style={{ maxWidth: '520px' }}>
-        <div className="card-header">
-          <h2>Employee Information</h2>
+      {/* Card */}
+      <div className="mx-auto w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-lg shadow-slate-200/50 overflow-hidden">
+        {/* Card Header */}
+        <div className="border-b border-slate-100 bg-gradient-to-r from-sky-50 to-violet-50 px-6 py-4">
+          <h2 className="text-lg font-semibold text-slate-700">
+            Employee Information
+          </h2>
         </div>
-        <div className="card-body">
-          <form onSubmit={handleSubmit}>
+
+        {/* Card Body */}
+        <div className="px-6 py-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Profile Picture Upload */}
-            <div className="form-group">
-              <label className="form-label">Profile Picture *</label>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Profile Picture <span className="text-red-500">*</span>
+              </label>
               <div
-                className="avatar-upload-area"
+                className="group relative flex flex-col items-center justify-center w-full min-h-[160px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 cursor-pointer hover:border-sky-400 hover:bg-sky-50/40 transition-all duration-200"
                 onClick={() => fileRef.current?.click()}
               >
                 {imagePreview ? (
-                  <img src={imagePreview} alt="Preview" className="avatar-preview" />
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-28 w-28 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-sky-100"
+                  />
                 ) : (
-                  <div className="avatar-placeholder">
-                    <span className="avatar-placeholder-icon">📷</span>
-                    <span className="avatar-placeholder-text">Click to upload photo</span>
-                    <span className="avatar-placeholder-hint">JPEG, PNG, WebP • Max 5MB</span>
+                  <div className="flex flex-col items-center gap-1.5 py-4">
+                    <span className="text-4xl opacity-60 group-hover:opacity-90 transition-opacity">📷</span>
+                    <span className="text-sm font-medium text-slate-600 group-hover:text-sky-600 transition-colors">
+                      Click to upload photo
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      JPEG, PNG, WebP • Max 5MB
+                    </span>
                   </div>
                 )}
                 <input
@@ -119,30 +145,58 @@ export default function AddEmployee() {
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   onChange={handleImageChange}
-                  style={{ display: 'none' }}
+                  className="hidden"
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="name">Employee Name * (must be unique)</label>
+            {/* Name Input */}
+            <div>
+              <label
+                className="block text-sm font-semibold text-slate-700 mb-2"
+                htmlFor="name"
+              >
+                Employee Name <span className="text-red-500">*</span>
+                <span className="ml-1 text-xs font-normal text-slate-400">(must be unique)</span>
+              </label>
               <input
-                id="name" name="name" type="text" className="form-input"
-                placeholder="Enter full name" value={form.name}
-                onChange={handleChange} autoFocus
+                id="name"
+                name="name"
+                type="text"
+                className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition-all duration-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none hover:border-slate-400"
+                placeholder="Enter full name"
+                value={form.name}
+                onChange={handleChange}
+                autoFocus
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="dailyWage">Daily Wage (₹) *</label>
+            {/* Daily Wage Input */}
+            <div>
+              <label
+                className="block text-sm font-semibold text-slate-700 mb-2"
+                htmlFor="dailyWage"
+              >
+                Daily Wage (₹) <span className="text-red-500">*</span>
+              </label>
               <input
-                id="dailyWage" name="dailyWage" type="number" className="form-input"
-                placeholder="e.g. 500" min="1" value={form.dailyWage}
+                id="dailyWage"
+                name="dailyWage"
+                type="number"
+                className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition-all duration-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none hover:border-slate-400"
+                placeholder="e.g. 500"
+                min="1"
+                value={form.dailyWage}
                 onChange={handleChange}
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full min-h-[44px] rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-sky-600/25 transition-all duration-200 hover:shadow-lg hover:shadow-sky-600/30 hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-md disabled:hover:brightness-100"
+              disabled={submitting}
+            >
               {submitting ? 'Adding...' : '➕ Add Employee'}
             </button>
           </form>

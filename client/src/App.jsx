@@ -9,12 +9,14 @@ function App() {
   return (
     <BrowserRouter>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/add" element={<AddEmployee />} />
-        <Route path="/employee/:id" element={<EmployeeDetail />} />
-        <Route path="/attendance" element={<AttendanceView />} />
-      </Routes>
+      <div className="pt-16 pb-16 md:pb-0 flex flex-col min-h-screen">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/add" element={<AddEmployee />} />
+          <Route path="/employee/:id" element={<EmployeeDetail />} />
+          <Route path="/attendance" element={<AttendanceView />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }

@@ -295,10 +295,10 @@ export default function EmployeeDetail() {
 
   if (loading) {
     return (
-      <div className="main-content">
-        <div className="loading-container">
+      <div className="max-w-6xl mx-auto px-4 py-6 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
           <div className="spinner" />
-          <span className="loading-text">Loading...</span>
+          <span className="text-slate-500 text-sm font-medium">Loading...</span>
         </div>
       </div>
     );
@@ -306,11 +306,11 @@ export default function EmployeeDetail() {
 
   if (!employee) {
     return (
-      <div className="main-content">
-        <div className="empty-state">
-          <div className="empty-state-icon">❌</div>
-          <h3>Employee not found</h3>
-          <button className="btn btn-primary" onClick={() => navigate('/')} style={{ marginTop: '1rem' }}>
+      <div className="max-w-6xl mx-auto px-4 py-6 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+          <div className="text-5xl">❌</div>
+          <h3 className="text-lg font-semibold text-slate-700">Employee not found</h3>
+          <button className="mt-4 px-6 py-2.5 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white font-semibold shadow-md hover:shadow-lg transition-all" onClick={() => navigate('/')}>
             Go to Dashboard
           </button>
         </div>
@@ -319,75 +319,73 @@ export default function EmployeeDetail() {
   }
 
   return (
-    <div className="main-content">
+    <div className="max-w-6xl mx-auto px-4 py-6 md:px-6 lg:px-8">
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.message}</div>
         </div>
       )}
 
-      <button className="back-link" onClick={() => navigate('/')}>
+      <button className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-700 mb-4 transition-colors" onClick={() => navigate('/')}>
         ← Back to Dashboard
       </button>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="flex flex-wrap items-start justify-between mb-6 gap-4">
+        <div className="flex items-center gap-4">
           {employee.profilePicture ? (
             <img
               src={`/uploads/${employee.profilePicture}`}
               alt={employee.name}
-              style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)' }}
+              className="w-16 h-16 rounded-full object-cover border-2 border-slate-200 shadow-sm"
             />
           ) : (
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--bg-glass)', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-200 flex items-center justify-center text-2xl shadow-sm">
               👤
             </div>
           )}
-          <div className="page-header" style={{ marginBottom: 0 }}>
-            <h1>{employee.name}</h1>
-            <p>Employee details, attendance & payment tracking</p>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">{employee.name}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Employee details, attendance & payment tracking</p>
           </div>
         </div>
-        <div className="actions-row">
-          <button className="btn btn-secondary" onClick={() => setEditModal(true)}>✏️ Edit</button>
-          <button className="btn btn-danger" onClick={handleDelete}>🗑️ Delete</button>
+        <div className="flex items-center gap-2">
+          <button className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setEditModal(true)}>✏️ Edit</button>
+          <button className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-medium border border-red-200 hover:bg-red-100 transition-colors" onClick={handleDelete}>🗑️ Delete</button>
         </div>
       </div>
 
       {/* ── Summary Table ── */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div className="card-header">
-          <h2>Employee Summary</h2>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200">
+          <h2 className="text-base md:text-lg font-semibold text-slate-800">Employee Summary</h2>
         </div>
-        <div className="table-wrapper">
-          <table className="table summary-table">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm">
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Daily Wage</th>
-                <th>Last Payment</th>
-                <th>Days Worked ({MONTH_NAMES[month].slice(0, 3)})</th>
-                <th>Advance (Since Pay)</th>
-                <th>Remaining Salary</th>
+              <tr className="bg-slate-50 text-left">
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Daily Wage</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Last Payment</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Days Worked ({MONTH_NAMES[month].slice(0, 3)})</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance (Since Pay)</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Remaining Salary</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td data-label="Name" className="employee-name">{employee.name}</td>
-                <td data-label="Daily Wage"><span className="payment-amount">{formatCurrency(employee.dailyWage)}</span></td>
-                <td data-label="Last Payment"><span className="date-badge">{formatDate(employee.lastPaymentDate)}</span></td>
-                <td data-label="Days Worked"><span className="badge badge-cyan">{daysWorkedThisMonth} days</span></td>
-                <td data-label="Advance">
-                  <span className="payment-amount" style={{ color: advanceAfterLastPayment > 0 ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
+              <tr className="border-t border-slate-100">
+                <td className="px-4 py-3 font-semibold text-slate-900">{employee.name}</td>
+                <td className="px-4 py-3 font-semibold text-sky-700">{formatCurrency(employee.dailyWage)}</td>
+                <td className="px-4 py-3"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.lastPaymentDate)}</span></td>
+                <td className="px-4 py-3"><span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-bold">{daysWorkedThisMonth} days</span></td>
+                <td className="px-4 py-3">
+                  <span className={`font-semibold ${advanceAfterLastPayment > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
                     {formatCurrency(advanceAfterLastPayment)}
                   </span>
                 </td>
-                <td data-label="Remaining Salary">
-                  <span className="payment-amount" style={{
-                    color: remainingSalary > 0 ? 'var(--accent-success)' : remainingSalary < 0 ? 'var(--accent-danger)' : 'var(--text-muted)',
-                    fontWeight: 700, fontSize: '1.05rem',
-                  }}>
+                <td className="px-4 py-3">
+                  <span className={`font-bold text-base ${remainingSalary > 0 ? 'text-emerald-600' : remainingSalary < 0 ? 'text-red-600' : 'text-slate-400'}`}>
                     {formatCurrency(remainingSalary)}
                   </span>
                 </td>
@@ -395,68 +393,97 @@ export default function EmployeeDetail() {
             </tbody>
           </table>
         </div>
+        {/* Mobile Card */}
+        <div className="md:hidden p-4 space-y-3">
+          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Name</span>
+            <span className="font-semibold text-slate-900">{employee.name}</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Daily Wage</span>
+            <span className="font-semibold text-sky-700">{formatCurrency(employee.dailyWage)}</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Payment</span>
+            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.lastPaymentDate)}</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Days Worked ({MONTH_NAMES[month].slice(0, 3)})</span>
+            <span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-bold">{daysWorkedThisMonth} days</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Advance (Since Pay)</span>
+            <span className={`font-semibold ${advanceAfterLastPayment > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(advanceAfterLastPayment)}</span>
+          </div>
+          <div className="flex justify-between items-center py-2">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Remaining Salary</span>
+            <span className={`font-bold text-base ${remainingSalary > 0 ? 'text-emerald-600' : remainingSalary < 0 ? 'text-red-600' : 'text-slate-400'}`}>{formatCurrency(remainingSalary)}</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Quick Info Cards ── */}
-      <div className="detail-grid">
-        <div className="detail-item">
-          <div className="detail-item-label">Daily Wage</div>
-          <div className="detail-item-value cyan">{formatCurrency(employee.dailyWage)}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Daily Wage</div>
+          <div className="text-xl md:text-2xl font-bold text-sky-600">{formatCurrency(employee.dailyWage)}</div>
         </div>
-        <div className="detail-item">
-          <div className="detail-item-label">Working Days (Since Pay)</div>
-          <div className="detail-item-value green">{workingDaysAfterLastPayment}</div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Working Days (Since Pay)</div>
+          <div className="text-xl md:text-2xl font-bold text-emerald-600">{workingDaysAfterLastPayment}</div>
         </div>
-        <div className="detail-item">
-          <div className="detail-item-label">Advance (Since Pay)</div>
-          <div className="detail-item-value amber">{formatCurrency(advanceAfterLastPayment)}</div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Advance (Since Pay)</div>
+          <div className="text-xl md:text-2xl font-bold text-amber-500">{formatCurrency(advanceAfterLastPayment)}</div>
         </div>
-        <div className="detail-item">
-          <div className="detail-item-label">Remaining Salary</div>
-          <div className="detail-item-value" style={{ color: remainingSalary >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Remaining Salary</div>
+          <div className={`text-xl md:text-2xl font-bold ${remainingSalary >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
             {formatCurrency(remainingSalary)}
           </div>
         </div>
       </div>
 
       {/* ── Payment & Advance Forms ── */}
-      <div className="forms-grid" style={{ marginBottom: '1.5rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-6">
         {/* Record Payment */}
-        <div className="card">
-          <div className="card-header"><h2>💰 Record Payment</h2></div>
-          <div className="card-body">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200">
+            <h2 className="text-base md:text-lg font-semibold text-slate-800">💰 Record Payment</h2>
+          </div>
+          <div className="p-4 md:p-6">
             {remainingSalary <= 0 ? (
-              <div className="empty-state" style={{ padding: '1rem', minHeight: '180px' }}>
-                <p style={{ color: 'var(--accent-warning)', fontWeight: 600, marginBottom: '0.5rem' }}>Payment Not Allowed</p>
-                <p style={{ fontSize: '0.85rem' }}>Remaining salary is settled or negative. Any extra money given must be recorded as an <b>Advance</b>.</p>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-amber-600 font-semibold mb-2">Payment Not Allowed</p>
+                <p className="text-sm text-slate-500">Remaining salary is settled or negative. Any extra money given must be recorded as an <b>Advance</b>.</p>
               </div>
             ) : (
               <form onSubmit={handleAddPayment}>
-                <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                <div className="bg-slate-50 p-4 rounded-lg mb-4 border border-slate-200 text-sm space-y-2">
                   
-                  <div className="method-toggle" onClick={() => setPayForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
-                    <div className={`method-option ${payForm.method === 'CASH' ? 'active' : ''}`}>CASH</div>
-                    <div className={`method-option ${payForm.method === 'UPI' ? 'active' : ''}`}>UPI</div>
+                  {/* Method Toggle */}
+                  <div className="flex rounded-full bg-slate-200/70 overflow-hidden cursor-pointer mb-3" onClick={() => setPayForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
+                    <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${payForm.method === 'CASH' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>CASH</div>
+                    <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${payForm.method === 'UPI' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>UPI</div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Wages Earned:</span>
-                    <span>{formatCurrency(wagesEarned)}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Wages Earned:</span>
+                    <span className="font-medium text-slate-800">{formatCurrency(wagesEarned)}</span>
                   </div>
                   
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">
                       Advance Deducted:<br/>
-                      <small style={{fontSize: '0.75rem', opacity: 0.7}}>(Max: {formatCurrency(maxPossibleDeduction)})</small>
+                      <small className="text-[0.7rem] opacity-70">(Max: {formatCurrency(maxPossibleDeduction)})</small>
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>- ₹</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">- ₹</span>
                       <input 
                         type="number" 
                         min="0" 
                         max={maxPossibleDeduction}
-                        className="form-input" 
-                        style={{ width: '90px', padding: '0.2rem 0.5rem', textAlign: 'right', color: 'var(--accent-danger)', fontWeight: 'bold' }}
+                        className="w-[90px] px-2 py-1 rounded-lg border border-slate-300 text-right text-red-600 font-bold text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
                         value={deductedAdvanceInput === null ? maxPossibleDeduction : deductedAdvanceInput} 
                         onChange={(e) => setDeductedAdvanceInput(e.target.value)} 
                       />
@@ -464,81 +491,86 @@ export default function EmployeeDetail() {
                   </div>
 
                   {carryOverAdvance > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--accent-warning)' }}>Advance Carried Over:</span>
-                      <span style={{ color: 'var(--accent-warning)' }}>{formatCurrency(carryOverAdvance)}</span>
+                    <div className="flex justify-between items-center text-[0.85rem]">
+                      <span className="text-amber-500">Advance Carried Over:</span>
+                      <span className="text-amber-500 font-medium">{formatCurrency(carryOverAdvance)}</span>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--border-active)', fontWeight: 'bold' }}>
-                    <span>Net Payable:</span>
-                    <span style={{ color: 'var(--accent-success)' }}>{formatCurrency(currentNetPayable)}</span>
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-slate-300 font-bold">
+                    <span className="text-slate-800">Net Payable:</span>
+                    <span className="text-emerald-600">{formatCurrency(currentNetPayable)}</span>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pay-amt">Payment Amount (₹)</label>
-                  <input id="pay-amt" type="number" className="form-input" placeholder="Enter amount" min="1"
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="pay-amt">Payment Amount (₹)</label>
+                  <input id="pay-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm" placeholder="Enter amount" min="1"
                     value={payForm.amount} onChange={(e) => setPayForm(p => ({ ...p, amount: e.target.value }))} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pay-dt">Date</label>
-                  <input id="pay-dt" type="date" className="form-input"
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="pay-dt">Date</label>
+                  <input id="pay-dt" type="date" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
                     value={payForm.date} onChange={(e) => setPayForm(p => ({ ...p, date: e.target.value }))} />
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Record Payment</button>
+                <button type="submit" className="w-full py-2.5 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all text-sm">Record Payment</button>
               </form>
             )}
           </div>
         </div>
 
         {/* Record Advance */}
-        <div className="card">
-          <div className="card-header"><h2>📤 Record Advance</h2></div>
-          <div className="card-body">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200">
+            <h2 className="text-base md:text-lg font-semibold text-slate-800">📤 Record Advance</h2>
+          </div>
+          <div className="p-4 md:p-6">
             <form onSubmit={handleAddAdvance}>
-              <div className="method-toggle" onClick={() => setAdvForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
-                <div className={`method-option ${advForm.method === 'CASH' ? 'active' : ''}`}>CASH</div>
-                <div className={`method-option ${advForm.method === 'UPI' ? 'active' : ''}`}>UPI</div>
+              {/* Method Toggle */}
+              <div className="flex rounded-full bg-slate-200/70 overflow-hidden cursor-pointer mb-4" onClick={() => setAdvForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
+                <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${advForm.method === 'CASH' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>CASH</div>
+                <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${advForm.method === 'UPI' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>UPI</div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="adv-amt">Amount (₹)</label>
-                <input id="adv-amt" type="number" className="form-input" placeholder="Enter amount" min="1"
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="adv-amt">Amount (₹)</label>
+                <input id="adv-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm" placeholder="Enter amount" min="1"
                   value={advForm.amount} onChange={(e) => setAdvForm(p => ({ ...p, amount: e.target.value }))} />
               </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="adv-dt">Date</label>
-                <input id="adv-dt" type="date" className="form-input"
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="adv-dt">Date</label>
+                <input id="adv-dt" type="date" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
                   value={advForm.date} onChange={(e) => setAdvForm(p => ({ ...p, date: e.target.value }))} />
               </div>
-              <button type="submit" className="btn btn-success">Record Advance</button>
+              <button type="submit" className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all text-sm">Record Advance</button>
             </form>
           </div>
         </div>
       </div>
 
       {/* ── Attendance Calendar ── */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div className="card-header">
-          <div className="calendar-nav">
-            <button className="btn btn-secondary btn-sm" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>◀</button>
-            <h2 className="calendar-month-title">{MONTH_NAMES[month]} {year}</h2>
-            <button className="btn btn-secondary btn-sm" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>▶</button>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+          <div className="flex items-center gap-3">
+            <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>◀</button>
+            <h2 className="text-base md:text-lg font-bold text-slate-800 min-w-[160px] text-center">{MONTH_NAMES[month]} {year}</h2>
+            <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>▶</button>
           </div>
-          <button className="btn btn-secondary btn-sm" onClick={() => setCurrentDate(new Date())}>Today</button>
+          <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setCurrentDate(new Date())}>Today</button>
         </div>
-        <div className="card-body">
-          <div className="calendar-legend">
-            <div className="legend-item"><span className="legend-dot legend-present" /> Present</div>
-            <div className="legend-item"><span className="legend-dot legend-absent" /> Absent</div>
-            <div className="legend-item"><span className="legend-dot legend-unmarked" /> Unmarked</div>
-            <div className="legend-item"><span className="legend-dot legend-payment" /> 💰 Payment</div>
-            <div className="legend-item"><span className="legend-dot legend-advance-dot" /> 📤 Advance</div>
+        <div className="p-3 md:p-5">
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 md:gap-5 mb-4 text-xs font-medium text-slate-600">
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Absent</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Unmarked</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> 💰 Payment</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-violet-400" /> 📤 Advance</div>
           </div>
 
+          {/* Calendar Grid (uses custom CSS classes) */}
           <div className="calendar-grid">
-            {DAY_LABELS.map((l) => <div key={l} className="calendar-day-label">{l}</div>)}
+            {DAY_LABELS.map((l) => <div key={l} className="text-center text-[10px] md:text-xs font-bold text-slate-400 uppercase py-1.5">{l}</div>)}
 
             {calendarCells.map((cell) => {
               if (cell.day === null) return <div key={cell.key} className="calendar-cell empty" />;
@@ -549,15 +581,15 @@ export default function EmployeeDetail() {
 
               return (
                 <div key={cell.key} className={`calendar-cell ${statusClass} ${cell.isToday ? 'today' : ''}`}>
-                  <span className="calendar-day-number">{cell.day}</span>
+                  <span className="text-[11px] md:text-xs font-bold text-slate-700">{cell.day}</span>
 
                   {/* Markers for payment / advance */}
-                  <div className="calendar-markers">
-                    {cell.hasPayment && <span className="marker marker-payment" title="Payment made">💰</span>}
-                    {cell.hasAdvance && <span className="marker marker-advance" title="Advance given">📤</span>}
+                  <div className="flex gap-0.5">
+                    {cell.hasPayment && <span className="text-[10px]" title="Payment made">💰</span>}
+                    {cell.hasAdvance && <span className="text-[10px]" title="Advance given">📤</span>}
                   </div>
 
-                  <div className="calendar-actions">
+                  <div className="flex gap-1 mt-auto">
                     <button className="cal-btn cal-present" title="Present" disabled={marking || cell.isLocked}
                       style={{ cursor: cell.isLocked ? 'not-allowed' : 'pointer', opacity: cell.isLocked ? 0.3 : 1 }}
                       onClick={() => !cell.isLocked && handleMarkAttendance(cell.day, 'present')}>✓</button>
@@ -572,72 +604,124 @@ export default function EmployeeDetail() {
         </div>
       </div>
 
-      {/* ── Payment History ── */}
-      <div className="forms-grid">
-        <div className="card">
-          <div className="card-header">
-            <h2>Payment History</h2>
-            <span className="badge badge-green">{employee.payments?.length || 0}</span>
+      {/* ── Payment & Advance History ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-6">
+        {/* Payment History */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center">
+            <h2 className="text-base md:text-lg font-semibold text-slate-800">Payment History</h2>
+            <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">{employee.payments?.length || 0}</span>
           </div>
           {employee.payments?.length ? (
-            <div className="table-wrapper">
-              <table className="table">
-                <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
-                <tbody>
-                  {[...employee.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p, i) => (
-                    <tr key={p._id || i}>
-                      <td data-label="#" style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                      <td data-label="Date">
-                        <span className="date-badge">{formatDate(p.date)}</span>
-                      </td>
-                      <td data-label="Amount">
-                        <span className="payment-amount positive">{formatCurrency(p.amount)}</span>
-                      </td>
-                      <td data-label="Method">
-                        {p.method && <span className={`badge-method ${p.method === 'UPI' ? 'badge-upi' : 'badge-cash'}`}>{p.method}</span>}
-                      </td>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-left">
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Method</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {[...employee.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p, i) => (
+                      <tr key={p._id || i} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3 text-slate-400">{i + 1}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(p.date)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-semibold text-emerald-600">{formatCurrency(p.amount)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {p.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${p.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.method}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile Cards */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {[...employee.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p, i) => (
+                  <div key={p._id || i} className="p-4 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-400 font-medium">#{i + 1}</span>
+                      {p.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${p.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.method}</span>}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500">{formatDate(p.date)}</span>
+                      <span className="font-semibold text-emerald-600">{formatCurrency(p.amount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
-            <div className="empty-state" style={{ padding: '2rem' }}>
-              <p style={{ color: 'var(--text-muted)' }}>No payments yet</p>
+            <div className="flex items-center justify-center py-10">
+              <p className="text-sm text-slate-400">No payments yet</p>
             </div>
           )}
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <h2>Advance History</h2>
-            <span className="badge badge-amber">{employee.advances?.length || 0}</span>
+        {/* Advance History */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center">
+            <h2 className="text-base md:text-lg font-semibold text-slate-800">Advance History</h2>
+            <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-bold">{employee.advances?.length || 0}</span>
           </div>
           {employee.advances?.length ? (
-            <div className="table-wrapper">
-              <table className="table">
-                <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
-                <tbody>
-                  {[...employee.advances].sort((a, b) => new Date(b.date) - new Date(a.date)).map((a, i) => (
-                    <tr key={a._id || i}>
-                      <td data-label="#" style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                      <td data-label="Date">
-                        <span className="date-badge">{formatDate(a.date)}</span>
-                      </td>
-                      <td data-label="Amount">
-                        <span className="payment-amount" style={{ color: 'var(--accent-warning)' }}>{formatCurrency(a.amount)}</span>
-                      </td>
-                      <td data-label="Method">
-                        {a.method && <span className={`badge-method ${a.method === 'UPI' ? 'badge-upi' : 'badge-cash'}`}>{a.method}</span>}
-                      </td>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-left">
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Method</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {[...employee.advances].sort((a, b) => new Date(b.date) - new Date(a.date)).map((a, i) => (
+                      <tr key={a._id || i} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3 text-slate-400">{i + 1}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(a.date)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-semibold text-amber-600">{formatCurrency(a.amount)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile Cards */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {[...employee.advances].sort((a, b) => new Date(b.date) - new Date(a.date)).map((a, i) => (
+                  <div key={a._id || i} className="p-4 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-400 font-medium">#{i + 1}</span>
+                      {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500">{formatDate(a.date)}</span>
+                      <span className="font-semibold text-amber-600">{formatCurrency(a.amount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
-            <div className="empty-state" style={{ padding: '2rem' }}>
-              <p style={{ color: 'var(--text-muted)' }}>No advances yet</p>
+            <div className="flex items-center justify-center py-10">
+              <p className="text-sm text-slate-400">No advances yet</p>
             </div>
           )}
         </div>
@@ -645,28 +729,28 @@ export default function EmployeeDetail() {
 
       {/* ── Edit Modal ── */}
       {editModal && (
-        <div className="modal-overlay" onClick={() => setEditModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Edit Employee</h3>
-              <button className="btn btn-icon btn-secondary" onClick={() => setEditModal(false)}>✕</button>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditModal(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">Edit Employee</h3>
+              <button className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors text-sm font-bold" onClick={() => setEditModal(false)}>✕</button>
             </div>
             <form onSubmit={handleUpdate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-name">Name</label>
-                  <input id="edit-name" type="text" className="form-input"
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="edit-name">Name</label>
+                  <input id="edit-name" type="text" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
                     value={editForm.name} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-wage">Daily Wage (₹)</label>
-                  <input id="edit-wage" type="number" className="form-input"
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="edit-wage">Daily Wage (₹)</label>
+                  <input id="edit-wage" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
                     value={editForm.dailyWage} onChange={(e) => setEditForm(p => ({ ...p, dailyWage: e.target.value }))} />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Changes</button>
+              <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button type="button" className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setEditModal(false)}>Cancel</button>
+                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white text-sm font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all">Save Changes</button>
               </div>
             </form>
           </div>

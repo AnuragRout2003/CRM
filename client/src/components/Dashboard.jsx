@@ -189,160 +189,281 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="main-content">
-        <div className="loading-container">
-          <div className="spinner" />
-          <span className="loading-text">Loading employees...</span>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="spinner" />
+        <span className="text-slate-500 text-sm font-medium animate-pulse">Loading employees...</span>
       </div>
     );
   }
 
   return (
-    <div className="main-content">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.message}</div>
         </div>
       )}
 
-      <div className="page-header">
-        <h1>Employee Dashboard</h1>
-        <p>Workforce overview — wages, attendance & salary status</p>
+      {/* ── Page Header ── */}
+      <div className="mb-6">
+        <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Employee Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Workforce overview — wages, attendance &amp; salary status
+        </p>
       </div>
 
-      {/* ── Command Center: Analytics & Stats ── */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.5rem' }}>
-        <div className="stat-card cyan">
-          <div className="stat-card-icon">👥</div>
-          <div className="stat-card-label">Total Employees</div>
-          <div className="stat-card-value">{employees.length}</div>
-        </div>
-        
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-          <div className="stat-card-label" style={{ color: 'var(--text-muted)' }}>Today's Attendance</div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-success)' }} title="Present">{presentToday}</span>
-            <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>/</span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-danger)' }} title="Absent">{absentToday}</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: 'auto' }} title="Unmarked">({unmarkedToday} unmk)</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', marginTop: '0.75rem', overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${(presentToday / Math.max(1, employees.length)) * 100}%`, background: 'var(--accent-success)' }} />
-            <div style={{ width: `${(absentToday / Math.max(1, employees.length)) * 100}%`, background: 'var(--accent-danger)' }} />
+      {/* ── Stats Grid ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        {/* Total Employees */}
+        <div className="bg-white border border-sky-200 rounded-xl p-4 lg:p-5 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-sky-100 to-transparent rounded-bl-full opacity-60" />
+          <div className="relative">
+            <span className="text-2xl">👥</span>
+            <p className="mt-2 text-xs font-semibold text-sky-600 uppercase tracking-wide">Total Employees</p>
+            <p className="mt-1 text-2xl lg:text-3xl font-extrabold text-slate-900">{employees.length}</p>
           </div>
         </div>
 
-        <div className="stat-card" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <div className="stat-card-icon">💰</div>
-          <div className="stat-card-label" style={{ color: 'var(--accent-danger)' }}>Total Pending Salary</div>
-          <div className="stat-card-value" style={{ color: 'var(--accent-danger)' }}>
-            {formatCurrency(totalPendingSalary)}
+        {/* Today's Attendance */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 lg:p-5 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Today's Attendance</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-2xl font-extrabold text-emerald-600" title="Present">{presentToday}</span>
+            <span className="text-sm text-slate-400">/</span>
+            <span className="text-xl font-bold text-red-600" title="Absent">{absentToday}</span>
+            <span className="text-xs text-slate-400 ml-auto" title="Unmarked">({unmarkedToday} unmk)</span>
           </div>
-          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>Total wages owed right now</div>
+          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden flex">
+            <div
+              className="bg-emerald-500 transition-all duration-500"
+              style={{ width: `${(presentToday / Math.max(1, employees.length)) * 100}%` }}
+            />
+            <div
+              className="bg-red-500 transition-all duration-500"
+              style={{ width: `${(absentToday / Math.max(1, employees.length)) * 100}%` }}
+            />
+          </div>
         </div>
 
-        <div className="stat-card" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-          <div className="stat-card-icon">📤</div>
-          <div className="stat-card-label" style={{ color: 'var(--accent-warning)' }}>Total Pending Advances</div>
-          <div className="stat-card-value" style={{ color: 'var(--accent-warning)' }}>
-            {formatCurrency(totalPendingAdvances)}
+        {/* Total Pending Salary */}
+        <div className="bg-red-50/50 border border-red-200 rounded-xl p-4 lg:p-5 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-red-100 to-transparent rounded-bl-full opacity-60" />
+          <div className="relative">
+            <span className="text-2xl">💰</span>
+            <p className="mt-2 text-xs font-semibold text-red-600 uppercase tracking-wide">Total Pending Salary</p>
+            <p className="mt-1 text-xl lg:text-2xl font-extrabold text-red-600">
+              {formatCurrency(totalPendingSalary)}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1">Total wages owed right now</p>
           </div>
-          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>Money currently out in field</div>
+        </div>
+
+        {/* Total Pending Advances */}
+        <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 lg:p-5 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-amber-100 to-transparent rounded-bl-full opacity-60" />
+          <div className="relative">
+            <span className="text-2xl">📤</span>
+            <p className="mt-2 text-xs font-semibold text-amber-600 uppercase tracking-wide">Total Pending Advances</p>
+            <p className="mt-1 text-xl lg:text-2xl font-extrabold text-amber-600">
+              {formatCurrency(totalPendingAdvances)}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1">Money currently out in field</p>
+          </div>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>7-Day Attendance Trend</h2>
-        <div style={{ width: '100%', height: '250px' }}>
+      {/* ── 7-Day Attendance Chart ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 lg:p-6 shadow-sm mb-6">
+        <h2 className="text-base lg:text-lg font-bold text-slate-800 mb-4">7-Day Attendance Trend</h2>
+        <div className="w-full h-48 lg:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weeklyAttendanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip 
-                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', boxShadow: 'var(--shadow-md)' }}
-                itemStyle={{ fontWeight: 600, color: 'var(--text-primary)' }}
-                cursor={{ fill: 'var(--bg-secondary)' }}
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                itemStyle={{ fontWeight: 600, color: '#0f172a' }}
+                cursor={{ fill: '#f8fafc' }}
               />
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-              <Bar dataKey="Present" fill="var(--accent-success)" radius={[4, 4, 0, 0]} barSize={30} />
-              <Bar dataKey="Absent" fill="var(--accent-danger)" radius={[4, 4, 0, 0]} barSize={30} />
+              <Bar dataKey="Present" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+              <Bar dataKey="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={30} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Employee List */}
-      <div className="card">
-        <div className="card-header">
-          <h2>All Employees</h2>
-          <div className="search-bar">
-            <span className="search-icon">🔍</span>
+      {/* ── Employee List ── */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Card Header with Search */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 lg:px-6 lg:py-4 border-b border-slate-100">
+          <h2 className="text-base lg:text-lg font-bold text-slate-800">All Employees</h2>
+          <div className="relative w-full sm:w-auto">
+            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 pointer-events-none">🔍</span>
             <input
               type="text"
-              className="form-input"
+              className="w-full sm:w-60 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400 transition-all"
               placeholder="Search by name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '240px' }}
             />
           </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">👷</div>
-            <h3>{search ? 'No matching employees' : 'No employees yet'}</h3>
-            <p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="text-5xl mb-4">👷</span>
+            <h3 className="text-lg font-semibold text-slate-700">
+              {search ? 'No matching employees' : 'No employees yet'}
+            </h3>
+            <p className="mt-1 text-sm text-slate-400">
               {search
                 ? 'Try a different search term'
                 : 'Add your first employee to get started.'}
             </p>
           </div>
         ) : (
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Daily Wage</th>
-                  <th>Last Payment</th>
-                  <th>Working Days Since</th>
-                  <th>Advance Since</th>
-                  <th>Remaining Salary</th>
-                  <th>Today's Attendance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((emp) => {
-                  const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
-                  const advanceAfter = emp.advanceAfterLastPayment || 0;
-                  const remaining = Math.max(0, workingDays * (emp.dailyWage || 0) - advanceAfter);
-                  const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
+          <>
+            {/* ── DESKTOP TABLE (lg+) ── */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Daily Wage</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Payment</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Working Days</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Advance</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Remaining Salary</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Today</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((emp) => {
+                    const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
+                    const advanceAfter = emp.advanceAfterLastPayment || 0;
+                    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0) - advanceAfter);
+                    const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
-                  return (
-                    <tr
-                      key={emp._id}
-                      className="employee-row-clickable"
-                      onClick={() => navigate(`/employee/${emp._id}`)}
-                    >
-                      <td data-label="Name">
-                        <div className="employee-name-cell">
-                          <img
-                            src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
-                            alt={emp.name}
-                            className="avatar-sm"
-                          />
-                          <span className="employee-name">{emp.name}</span>
-                        </div>
-                      </td>
-                      <td data-label="Daily Wage" onClick={(e) => e.stopPropagation()}>
+                    return (
+                      <tr
+                        key={emp._id}
+                        className="hover:bg-sky-50/50 cursor-pointer transition-colors group"
+                        onClick={() => navigate(`/employee/${emp._id}`)}
+                      >
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
+                              alt={emp.name}
+                              className="w-8 h-8 rounded-full object-cover bg-slate-200 ring-2 ring-white shadow-sm flex-shrink-0"
+                            />
+                            <span className="font-semibold text-slate-800 group-hover:text-sky-700 transition-colors">{emp.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          {editingWage.id === emp._id ? (
+                            <input
+                              type="number"
+                              className="w-24 px-2 py-1 bg-white border border-sky-300 rounded-md text-sm font-semibold text-right focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                              value={editingWage.value}
+                              onChange={(e) => setEditingWage(prev => ({ ...prev, value: e.target.value }))}
+                              onBlur={() => handleUpdateWage(emp._id)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateWage(emp._id); if (e.key === 'Escape') setEditingWage({ id: null, value: '' }); }}
+                              autoFocus
+                              min="0"
+                            />
+                          ) : (
+                            <span
+                              className="font-semibold text-slate-700 cursor-pointer border-b border-dashed border-slate-300 hover:border-sky-500 hover:text-sky-600 transition-colors"
+                              title="Click to edit daily wage"
+                              onClick={() => setEditingWage({ id: emp._id, value: emp.dailyWage || 0 })}
+                            >
+                              {formatCurrency(emp.dailyWage)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{formatDate(emp.lastPaymentDate)}</span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-700">{workingDays} days</span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={`font-semibold ${advanceAfter > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                            {formatCurrency(advanceAfter)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`font-bold ${remaining > 0 ? 'text-emerald-600' : remaining < 0 ? 'text-red-600' : 'text-slate-400'}`}
+                          >
+                            {formatCurrency(remaining)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              className={`cal-btn cal-present ${todayStatus === 'present' ? 'opacity-100 ring-2 ring-emerald-400' : 'opacity-50 hover:opacity-80'}`}
+                              title="Mark Present"
+                              onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'present')}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              className={`cal-btn cal-absent ${todayStatus === 'absent' ? 'opacity-100 ring-2 ring-red-400' : 'opacity-50 hover:opacity-80'}`}
+                              title="Mark Absent"
+                              onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'absent')}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── MOBILE CARDS (< lg) ── */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {filtered.map((emp) => {
+                const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
+                const advanceAfter = emp.advanceAfterLastPayment || 0;
+                const remaining = Math.max(0, workingDays * (emp.dailyWage || 0) - advanceAfter);
+                const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
+
+                return (
+                  <div
+                    key={emp._id}
+                    className="p-4 active:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/employee/${emp._id}`)}
+                  >
+                    {/* Top: Avatar + Name */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <img
+                        src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
+                        alt={emp.name}
+                        className="w-10 h-10 rounded-full object-cover bg-slate-200 ring-2 ring-white shadow-sm flex-shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-800 truncate">{emp.name}</p>
+                        <p className="text-xs text-slate-400">Last paid: {formatDate(emp.lastPaymentDate)}</p>
+                      </div>
+                    </div>
+
+                    {/* 2x2 Stats Grid */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="bg-slate-50 rounded-lg px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase">Wage/day</p>
                         {editingWage.id === emp._id ? (
                           <input
                             type="number"
-                            className="form-input"
-                            style={{ width: '90px', padding: '0.25rem 0.5rem', fontWeight: 600, textAlign: 'right' }}
+                            className="w-full mt-0.5 px-1.5 py-0.5 bg-white border border-sky-300 rounded text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-sky-500/40"
                             value={editingWage.value}
                             onChange={(e) => setEditingWage(prev => ({ ...prev, value: e.target.value }))}
                             onBlur={() => handleUpdateWage(emp._id)}
@@ -351,64 +472,55 @@ export default function Dashboard() {
                             min="0"
                           />
                         ) : (
-                          <span
-                            className="payment-amount"
-                            style={{ cursor: 'pointer', borderBottom: '1px dashed var(--border-active)' }}
-                            title="Click to edit daily wage"
+                          <p
+                            className="text-sm font-bold text-slate-700 mt-0.5 border-b border-dashed border-slate-300"
                             onClick={() => setEditingWage({ id: emp._id, value: emp.dailyWage || 0 })}
                           >
                             {formatCurrency(emp.dailyWage)}
-                          </span>
+                          </p>
                         )}
-                      </td>
-                      <td data-label="Last Payment">
-                        <span className="date-badge">{formatDate(emp.lastPaymentDate)}</span>
-                      </td>
-                      <td data-label="Working Days">
-                        <span className="badge badge-cyan">{workingDays} days</span>
-                      </td>
-                      <td data-label="Advance">
-                        <span className="payment-amount" style={{ color: advanceAfter > 0 ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
+                      </div>
+                      <div className="bg-sky-50 rounded-lg px-3 py-2">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase">Working Days</p>
+                        <p className="text-sm font-bold text-sky-700 mt-0.5">{workingDays} days</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-lg px-3 py-2">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase">Advance</p>
+                        <p className={`text-sm font-bold mt-0.5 ${advanceAfter > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
                           {formatCurrency(advanceAfter)}
-                        </span>
-                      </td>
-                      <td data-label="Remaining">
-                        <span
-                          className="payment-amount"
-                          style={{
-                            color: remaining > 0 ? 'var(--accent-success)' : remaining < 0 ? 'var(--accent-danger)' : 'var(--text-muted)',
-                            fontWeight: 700,
-                          }}
-                        >
+                        </p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-lg px-3 py-2">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase">Remaining</p>
+                        <p className={`text-sm font-bold mt-0.5 ${remaining > 0 ? 'text-emerald-600' : remaining < 0 ? 'text-red-600' : 'text-slate-400'}`}>
                           {formatCurrency(remaining)}
-                        </span>
-                      </td>
-                      <td data-label="Today" onClick={(e) => e.stopPropagation()}>
-                        <div className="calendar-actions" style={{ justifyContent: 'flex-start', gap: '0.5rem' }}>
-                          <button
-                            className="cal-btn cal-present"
-                            style={{ opacity: todayStatus === 'present' ? 1 : 0.5, border: todayStatus === 'present' ? '1px solid var(--accent-success)' : '1px solid transparent' }}
-                            title="Mark Present"
-                            onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'present')}
-                          >
-                            ✓
-                          </button>
-                          <button
-                            className="cal-btn cal-absent"
-                            style={{ opacity: todayStatus === 'absent' ? 1 : 0.5, border: todayStatus === 'absent' ? '1px solid var(--accent-danger)' : '1px solid transparent' }}
-                            title="Mark Absent"
-                            onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'absent')}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Attendance Buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-xs text-slate-400 mr-auto">Today:</span>
+                      <button
+                        className={`cal-btn cal-present !w-8 !h-8 !text-xs ${todayStatus === 'present' ? 'opacity-100 ring-2 ring-emerald-400' : 'opacity-50 hover:opacity-80'}`}
+                        title="Mark Present"
+                        onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'present')}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        className={`cal-btn cal-absent !w-8 !h-8 !text-xs ${todayStatus === 'absent' ? 'opacity-100 ring-2 ring-red-400' : 'opacity-50 hover:opacity-80'}`}
+                        title="Mark Absent"
+                        onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'absent')}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

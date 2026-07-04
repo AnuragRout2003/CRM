@@ -167,142 +167,182 @@ export default function AttendanceView() {
     return date < sevenDaysAgo;
   };
 
+  // Shared helper for computing cell lock/status info (used in both mobile & desktop)
+  const getCellInfo = (empId, date) => {
+    const status = getStatus(empId, date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const cellDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const sevenDaysFuture = new Date(today);
+    sevenDaysFuture.setDate(today.getDate() + 7);
+    const isLocked = cellDate < sevenDaysAgo || cellDate > sevenDaysFuture;
+    const isToday = today.getTime() === cellDate.getTime();
+    return { status, isLocked, isToday };
+  };
+
   if (loading) {
     return (
-      <div className="main-content">
-        <div className="loading-container">
+      <div className="flex-1 p-4 md:p-8">
+        <div className="flex flex-col items-center justify-center gap-4 py-20">
           <div className="spinner" />
-          <span className="loading-text">Loading attendance matrix...</span>
+          <span className="text-sm font-medium text-slate-500 animate-pulse">Loading attendance matrix...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="main-content" style={{ maxWidth: '100%' }}>
+    <div className="flex-1 p-4 md:p-8 max-w-full">
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.message}</div>
         </div>
       )}
 
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ── Page Header ── */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div>
-          <h1>Attendance Matrix</h1>
-          <p>Quickly mark attendance for all employees, week by week.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Attendance Matrix
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Quickly mark attendance for all employees, week by week.
+          </p>
         </div>
-        
-        <div className="calendar-nav" style={{ background: 'var(--bg-card)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-          <button className="btn btn-secondary btn-sm" onClick={prevWeek}>◀ Prev</button>
-          <button className="btn btn-secondary btn-sm" onClick={goToToday}>Today</button>
-          <button className="btn btn-secondary btn-sm" onClick={nextWeek}>Next ▶</button>
+
+        {/* Week navigation */}
+        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm self-start md:self-auto">
+          <button
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all"
+            onClick={prevWeek}
+          >
+            ◀ Prev
+          </button>
+          <button
+            className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-50 rounded-lg border border-sky-200 hover:bg-sky-100 hover:border-sky-300 transition-all"
+            onClick={goToToday}
+          >
+            Today
+          </button>
+          <button
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all"
+            onClick={nextWeek}
+          >
+            Next ▶
+          </button>
         </div>
       </div>
 
-      <div className="card" style={{ overflow: 'hidden' }}>
-        <div className="card-header">
-          <h2>Week of {formatDateLabel(weekDates[0])} — {formatDateLabel(weekDates[6])}</h2>
-          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ display: 'inline-block', width: '12px', height: '12px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--accent-success)', borderRadius: '2px' }}></span> Present</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ display: 'inline-block', width: '12px', height: '12px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid var(--accent-danger)', borderRadius: '2px' }}></span> Absent</span>
+      {/* ── Card Wrapper ── */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Card Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 md:px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+          <h2 className="text-sm md:text-base font-bold text-slate-800">
+            Week of {formatDateLabel(weekDates[0])} — {formatDateLabel(weekDates[6])}
+          </h2>
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-emerald-500/15 border border-emerald-500/40"></span>
+              Present
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-red-500/15 border border-red-500/40"></span>
+              Absent
+            </span>
           </div>
         </div>
-        
-        <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-          <table className="table" style={{ borderCollapse: 'collapse', width: '100%' }}>
+
+        {/* ── DESKTOP TABLE (hidden on mobile) ── */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th style={{ position: 'sticky', left: 0, background: 'var(--bg-secondary)', zIndex: 10, borderRight: '2px solid var(--border-color)', minWidth: '200px' }}>
+                <th className="sticky left-0 z-10 bg-slate-50 border-r-2 border-slate-200 px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[200px]">
                   Employee Name
                 </th>
                 {weekDates.map((date, i) => {
                   const isToday = new Date().toDateString() === date.toDateString();
                   return (
-                    <th key={i} style={{ textAlign: 'center', minWidth: '120px', background: isToday ? 'rgba(2, 132, 199, 0.05)' : 'var(--bg-secondary)', color: isToday ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                    <th
+                      key={i}
+                      className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[120px] ${
+                        isToday
+                          ? 'bg-sky-50/60 text-sky-700'
+                          : 'bg-slate-50 text-slate-500'
+                      }`}
+                    >
                       {formatDateLabel(date)}
                     </th>
                   );
                 })}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {employees.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '3rem' }}>
-                    <div className="empty-state" style={{ padding: 0 }}>
-                      <p>No employees found. Add an employee to get started.</p>
-                    </div>
+                  <td colSpan={8} className="text-center py-12">
+                    <p className="text-slate-400 text-sm">No employees found. Add an employee to get started.</p>
                   </td>
                 </tr>
               ) : (
                 employees.map((emp) => (
-                  <tr key={emp._id}>
-                    <td style={{ position: 'sticky', left: 0, background: 'var(--bg-card)', zIndex: 9, borderRight: '2px solid var(--border-color)', fontWeight: 600 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <tr key={emp._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="sticky left-0 z-[9] bg-white border-r-2 border-slate-200 px-4 py-3 font-semibold text-sm text-slate-800">
+                      <div className="flex items-center gap-2.5">
                         {emp.profilePicture ? (
-                          <img src={`/uploads/${emp.profilePicture}`} alt={emp.name} className="avatar-sm" style={{ width: '28px', height: '28px' }} />
+                          <img
+                            src={`/uploads/${emp.profilePicture}`}
+                            alt={emp.name}
+                            className="w-7 h-7 rounded-full object-cover ring-2 ring-slate-100"
+                          />
                         ) : (
-                          <div className="avatar-sm" style={{ width: '28px', height: '28px', background: 'var(--border-color)' }}></div>
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                            {emp.name?.charAt(0)?.toUpperCase()}
+                          </div>
                         )}
-                        {emp.name}
+                        <span className="truncate max-w-[140px]">{emp.name}</span>
                       </div>
                     </td>
                     {weekDates.map((date, i) => {
-                      const status = getStatus(emp._id, date);
-                      
-                      const now = new Date();
-                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                      const cellDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                      
-                      const sevenDaysAgo = new Date(today);
-                      sevenDaysAgo.setDate(today.getDate() - 7);
-                      
-                      const sevenDaysFuture = new Date(today);
-                      sevenDaysFuture.setDate(today.getDate() + 7);
-                      
-                      const isLocked = cellDate < sevenDaysAgo || cellDate > sevenDaysFuture;
-                      
-                      let cellStyle = {
-                        textAlign: 'center',
-                        cursor: isLocked ? 'not-allowed' : 'pointer',
-                        userSelect: 'none',
-                        transition: 'all 0.15s ease',
-                        borderRight: '1px solid var(--border-color)',
-                        height: '60px',
-                        opacity: isLocked ? 0.4 : 1, // Visually fade locked cells
-                        position: 'relative' // For absolute positioning lock icon if needed
-                      };
-                      
-                      let content = <span style={{ color: 'var(--text-muted)', opacity: 0.3 }}>-</span>;
+                      const { status, isLocked } = getCellInfo(emp._id, date);
+
+                      let cellClasses = 'text-center select-none transition-all duration-150 border-r border-slate-100 h-[60px] relative';
+                      let content;
+
+                      if (isLocked) {
+                        cellClasses += ' opacity-40 cursor-not-allowed';
+                      } else {
+                        cellClasses += ' cursor-pointer';
+                      }
 
                       if (status === 'present') {
-                        cellStyle.background = 'rgba(16, 185, 129, 0.25)';
-                        cellStyle.color = 'var(--accent-success)';
-                        cellStyle.fontWeight = 'bold';
-                        content = 'P';
+                        cellClasses += ' bg-emerald-500/20 text-emerald-600 font-bold';
+                        content = <span>P</span>;
                       } else if (status === 'absent') {
-                        cellStyle.background = 'rgba(239, 68, 68, 0.25)';
-                        cellStyle.color = 'var(--accent-danger)';
-                        cellStyle.fontWeight = 'bold';
-                        content = 'A';
-                      } else if (isLocked) {
-                        cellStyle.background = 'rgba(0, 0, 0, 0.02)';
+                        cellClasses += ' bg-red-500/20 text-red-600 font-bold';
+                        content = <span>A</span>;
+                      } else {
+                        if (isLocked) {
+                          cellClasses += ' bg-slate-50/50';
+                        } else {
+                          cellClasses += ' hover:bg-slate-100/70';
+                        }
+                        content = <span className="text-slate-300">-</span>;
                       }
 
                       return (
-                        <td 
-                          key={i} 
-                          style={cellStyle}
+                        <td
+                          key={i}
+                          className={cellClasses}
                           onClick={() => !isLocked && handleCellClick(emp._id, date)}
-                          onMouseEnter={(e) => {
-                            if (!status && !isLocked) e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!status && !isLocked) e.currentTarget.style.background = 'transparent';
-                          }}
                         >
                           {content}
-                          {isLocked && <span style={{ position: 'absolute', top: '2px', right: '2px', fontSize: '0.6rem', opacity: 0.7 }}>🔒</span>}
+                          {isLocked && (
+                            <span className="absolute top-1 right-1 text-[0.6rem] opacity-70">🔒</span>
+                          )}
                         </td>
                       );
                     })}
@@ -311,6 +351,98 @@ export default function AttendanceView() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ── MOBILE CARD VIEW (visible only on mobile) ── */}
+        <div className="md:hidden">
+          {employees.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-slate-400 text-sm">No employees found. Add an employee to get started.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {employees.map((emp) => (
+                <div key={emp._id} className="px-4 py-4">
+                  {/* Employee name + avatar */}
+                  <div className="flex items-center gap-2.5 mb-3">
+                    {emp.profilePicture ? (
+                      <img
+                        src={`/uploads/${emp.profilePicture}`}
+                        alt={emp.name}
+                        className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-xs font-bold text-slate-500">
+                        {emp.name?.charAt(0)?.toUpperCase()}
+                      </div>
+                    )}
+                    <span className="font-semibold text-sm text-slate-800 truncate">{emp.name}</span>
+                  </div>
+
+                  {/* Day circles row */}
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {weekDates.map((date, i) => {
+                      const { status, isLocked, isToday } = getCellInfo(emp._id, date);
+                      const dayNum = date.getDate();
+                      const dayLabel = date.toLocaleDateString('en-IN', { weekday: 'narrow' });
+
+                      let circleClasses =
+                        'flex flex-col items-center justify-center rounded-lg py-1.5 text-center transition-all duration-150 select-none';
+
+                      if (isLocked) {
+                        circleClasses += ' opacity-35 cursor-not-allowed';
+                      } else {
+                        circleClasses += ' cursor-pointer active:scale-95';
+                      }
+
+                      if (status === 'present') {
+                        circleClasses += ' bg-emerald-500/20 border border-emerald-500/30';
+                      } else if (status === 'absent') {
+                        circleClasses += ' bg-red-500/20 border border-red-500/30';
+                      } else {
+                        circleClasses += ' bg-slate-100 border border-transparent';
+                      }
+
+                      if (isToday) {
+                        circleClasses += ' ring-2 ring-sky-500 ring-offset-1';
+                      }
+
+                      return (
+                        <button
+                          key={i}
+                          className={circleClasses}
+                          disabled={isLocked}
+                          onClick={() => !isLocked && handleCellClick(emp._id, date)}
+                        >
+                          <span className="text-[9px] font-medium text-slate-400 leading-none">{dayLabel}</span>
+                          <span
+                            className={`text-xs font-bold leading-tight mt-0.5 ${
+                              status === 'present'
+                                ? 'text-emerald-600'
+                                : status === 'absent'
+                                ? 'text-red-600'
+                                : 'text-slate-500'
+                            }`}
+                          >
+                            {dayNum}
+                          </span>
+                          {status === 'present' && (
+                            <span className="text-[8px] font-bold text-emerald-600 leading-none mt-0.5">P</span>
+                          )}
+                          {status === 'absent' && (
+                            <span className="text-[8px] font-bold text-red-600 leading-none mt-0.5">A</span>
+                          )}
+                          {!status && isLocked && (
+                            <span className="text-[8px] leading-none mt-0.5">🔒</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
