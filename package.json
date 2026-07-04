@@ -5,8 +5,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "cd server && node index.js",
-    "postinstall": "cd server && npm install",
-    "build": "cd client && npm install && npm run build"
+    "postinstall": "cd server && npm install && cd ../client && npm install && npm run build",
+    "build": "npm run postinstall"
   },
   "engines": {
     "node": ">=18.0.0"
