@@ -2,23 +2,50 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const Employee = require('../models/Employee');
+const Attendance = require('../models/Attendance');
+const cloudinary = require('cloudinary').v2;
 
-// ── Multer config for profile picture uploads ──
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, `profile-${uniqueSuffix}${ext}`);
-  },
+// ── Cloudinary config ──
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Helper to upload buffer to Cloudinary
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: 'rout_plumbing_profiles' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
+  });
+};
+
+// Helper to delete from Cloudinary based on secure_url
+const deleteFromCloudinary = async (url) => {
+  if (!url || !url.includes('cloudinary.com')) return;
+  try {
+    const parts = url.split('/');
+    const fileWithExt = parts[parts.length - 1];
+    const folder = parts[parts.length - 2];
+    const publicId = fileWithExt.split('.')[0];
+    
+    if (folder === 'rout_plumbing_profiles') {
+      await cloudinary.uploader.destroy(`${folder}/${publicId}`);
+    }
+  } catch (err) {
+    console.error('Failed to delete image from Cloudinary:', err);
+  }
+};
+
+// ── Multer config (Memory Storage) ──
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -70,15 +97,16 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
     });
     if (existing) {
-      // Delete the uploaded file since we won't use it
-      fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: `Employee "${name}" already exists` });
     }
+
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer);
 
     const employee = new Employee({
       name: name.trim(),
       dailyWage: parseFloat(dailyWage) || 0,
-      profilePicture: req.file.filename,
+      profilePicture: result.secure_url,
       payments: [],
       advances: [],
       lastPaymentDate: null,
@@ -87,10 +115,6 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
     await employee.save();
     res.status(201).json(employee);
   } catch (err) {
-    // Clean up uploaded file on error
-    if (req.file) {
-      fs.unlink(req.file.path, () => {});
-    }
     if (err.code === 11000) {
       return res.status(400).json({ error: 'An employee with this name already exists' });
     }
@@ -102,7 +126,7 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
 const parseDateWithTime = (dateStr) => {
   if (!dateStr) return new Date();
   const d = new Date(dateStr);
-  if (typeof dateStr === 'string' && dateStr.length === 10) { // e.g. "2026-07-03"
+  if (typeof dateStr === 'string' && dateStr.length === 10) { 
     const now = new Date();
     d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
   }
@@ -121,11 +145,8 @@ router.post('/:id/payment', async (req, res) => {
     employee.payments.push({ amount, date: paymentDate, method });
     employee.lastPaymentDate = paymentDate;
 
-    // Handle carry over advance
     if (carryOverAdvance && Number(carryOverAdvance) > 0) {
-      // Create a timestamp exactly 1 ms after the payment so it falls in the next cycle
       const carryOverDate = new Date(paymentDate.getTime() + 1);
-      // carry over advance adopts the payment method for tracking
       employee.advances.push({ amount: Number(carryOverAdvance), date: carryOverDate, method });
     }
 
@@ -154,20 +175,24 @@ router.post('/:id/advance', async (req, res) => {
   }
 });
 
-// PUT update employee details (name, dailyWage, optional new profile picture)
+// PUT update employee details
 router.put('/:id', upload.single('profilePicture'), async (req, res) => {
   try {
     const { name, dailyWage } = req.body;
     const updateData = { name, dailyWage };
+    
+    const oldEmp = await Employee.findById(req.params.id);
+    if (!oldEmp) return res.status(404).json({ error: 'Employee not found' });
 
     if (req.file) {
-      // Delete old profile picture
-      const oldEmp = await Employee.findById(req.params.id);
-      if (oldEmp?.profilePicture) {
-        const oldPath = path.join(uploadsDir, oldEmp.profilePicture);
-        fs.unlink(oldPath, () => {});
+      // Upload new to Cloudinary
+      const result = await uploadToCloudinary(req.file.buffer);
+      updateData.profilePicture = result.secure_url;
+      
+      // Delete old from Cloudinary
+      if (oldEmp.profilePicture) {
+        await deleteFromCloudinary(oldEmp.profilePicture);
       }
-      updateData.profilePicture = req.file.filename;
     }
 
     const employee = await Employee.findByIdAndUpdate(
@@ -175,7 +200,6 @@ router.put('/:id', upload.single('profilePicture'), async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
-    if (!employee) return res.status(404).json({ error: 'Employee not found' });
     res.json(employee);
   } catch (err) {
     if (err.code === 11000) {
@@ -191,14 +215,11 @@ router.delete('/:id', async (req, res) => {
     const employee = await Employee.findByIdAndDelete(req.params.id);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
-    // Delete profile picture file
+    // Delete from Cloudinary
     if (employee.profilePicture) {
-      const picPath = path.join(uploadsDir, employee.profilePicture);
-      fs.unlink(picPath, () => {});
+      await deleteFromCloudinary(employee.profilePicture);
     }
 
-    // Also delete attendance record
-    const Attendance = require('../models/Attendance');
     await Attendance.deleteOne({ employee: req.params.id });
     res.json({ message: 'Employee deleted successfully' });
   } catch (err) {

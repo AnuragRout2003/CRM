@@ -357,7 +357,7 @@ export default function Dashboard() {
                         <td className="px-6 py-3.5">
                           <div className="flex items-center gap-3">
                             <img
-                              src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
+                              src={emp.profilePicture?.startsWith('http') ? emp.profilePicture : (emp.profilePicture ? `/uploads/${emp.profilePicture}` : '')}
                               alt={emp.name}
                               className="w-8 h-8 rounded-full object-cover bg-slate-200 ring-2 ring-white shadow-sm flex-shrink-0"
                             />
@@ -446,7 +446,7 @@ export default function Dashboard() {
                     {/* Top: Avatar + Name */}
                     <div className="flex items-center gap-3 mb-3">
                       <img
-                        src={emp.profilePicture ? `/uploads/${emp.profilePicture}` : ''}
+                        src={emp.profilePicture?.startsWith('http') ? emp.profilePicture : (emp.profilePicture ? `/uploads/${emp.profilePicture}` : '')}
                         alt={emp.name}
                         className="w-10 h-10 rounded-full object-cover bg-slate-200 ring-2 ring-white shadow-sm flex-shrink-0"
                       />

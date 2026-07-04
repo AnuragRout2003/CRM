@@ -294,7 +294,7 @@ export default function AttendanceView() {
                       <div className="flex items-center gap-2.5">
                         {emp.profilePicture ? (
                           <img
-                            src={`/uploads/${emp.profilePicture}`}
+                            src={emp.profilePicture?.startsWith('http') ? emp.profilePicture : `/uploads/${emp.profilePicture}`}
                             alt={emp.name}
                             className="w-7 h-7 rounded-full object-cover ring-2 ring-slate-100"
                           />
@@ -367,7 +367,7 @@ export default function AttendanceView() {
                   <div className="flex items-center gap-2.5 mb-3">
                     {emp.profilePicture ? (
                       <img
-                        src={`/uploads/${emp.profilePicture}`}
+                        src={emp.profilePicture?.startsWith('http') ? emp.profilePicture : `/uploads/${emp.profilePicture}`}
                         alt={emp.name}
                         className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100"
                       />

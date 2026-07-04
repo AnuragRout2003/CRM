@@ -335,7 +335,7 @@ export default function EmployeeDetail() {
         <div className="flex items-center gap-4">
           {employee.profilePicture ? (
             <img
-              src={`/uploads/${employee.profilePicture}`}
+              src={employee.profilePicture?.startsWith('http') ? employee.profilePicture : `/uploads/${employee.profilePicture}`}
               alt={employee.name}
               className="w-16 h-16 rounded-full object-cover border-2 border-slate-200 shadow-sm"
             />
