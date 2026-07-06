@@ -3,8 +3,14 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const Employee = require('../models/Employee');
-const Attendance = require('../models/Attendance');
 const cloudinary = require('cloudinary').v2;
+const {
+  AttendanceDay,
+  SalaryPayment,
+  AdvanceTransaction,
+  buildEmployeePayload,
+  getEmployeePayrollSnapshot,
+} = require('../utils/payroll');
 
 // ── Cloudinary config ──
 cloudinary.config({
@@ -66,7 +72,8 @@ const upload = multer({
 router.get('/', async (req, res) => {
   try {
     const employees = await Employee.find().sort({ createdAt: -1 });
-    res.json(employees);
+    const payload = await Promise.all(employees.map((employee) => buildEmployeePayload(employee)));
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -77,7 +84,7 @@ router.get('/:id', async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
-    res.json(employee);
+    res.json(await buildEmployeePayload(employee));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -107,10 +114,6 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       name: name.trim(),
       dailyWage: parseFloat(dailyWage) || 0,
       profilePicture: result.secure_url,
-      payments: [],
-      advances: [],
-      paidTillDate: null,
-      partialPaidDays: 0,
     });
 
     await employee.save();
@@ -134,25 +137,50 @@ const parseDateWithTime = (dateStr) => {
   return d;
 };
 
-const toDateOnlyString = (date) => {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+const allocateSalaryToPresentDays = async (employee, grossSettled) => {
+  let amountLeft = grossSettled;
+  const allocations = [];
+  let daysPaid = 0;
+  let paidThroughDate = null;
 
-const getPresentDates = (attendanceDoc) => {
-  if (!attendanceDoc?.attendance) return [];
+  const presentDays = await AttendanceDay.find({
+    employee: employee._id,
+    status: 'present',
+  }).sort({ dateKey: 1 });
 
-  const presentDates = [];
-  attendanceDoc.attendance.forEach((days, month) => {
-    const dayEntries = days instanceof Map ? days.entries() : Object.entries(days || {});
-    for (const [day, status] of dayEntries) {
-      if (status === 'present') {
-        presentDates.push(`${month}-${String(day).padStart(2, '0')}`);
-      }
+  for (const day of presentDays) {
+    if (amountLeft <= 0) break;
+
+    const wage = day.wageForThatDay || employee.dailyWage || 0;
+    const alreadyPaid = day.paidAmount || 0;
+    const unpaidForDay = Math.max(0, wage - alreadyPaid);
+    if (unpaidForDay <= 0) continue;
+
+    const applied = Math.min(amountLeft, unpaidForDay);
+    day.paidAmount = alreadyPaid + applied;
+    await day.save();
+
+    allocations.push({
+      attendanceDay: day._id,
+      dateKey: day.dateKey,
+      amount: applied,
+    });
+
+    daysPaid += wage > 0 ? applied / wage : 0;
+    if (day.paidAmount >= wage) {
+      paidThroughDate = day.date;
     }
-  });
 
-  return presentDates.sort();
+    amountLeft -= applied;
+  }
+
+  const snapshot = await getEmployeePayrollSnapshot(employee);
+  return {
+    allocations,
+    daysPaid,
+    paidThroughDate,
+    carriedForwardSalary: snapshot.remainingSalary,
+  };
 };
 
 // POST add salary payment to employee
@@ -165,68 +193,39 @@ router.post('/:id/payment', async (req, res) => {
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
     const deduction = Number(advanceDeducted) || 0;
+    const paymentAmount = Number(amount) || 0;
+    const grossSettled = paymentAmount + deduction;
+
+    if (paymentAmount <= 0) {
+      return res.status(400).json({ error: 'Payment amount must be greater than zero' });
+    }
+
     if (deduction > 0) {
-      employee.advances.push({
-        amount: -deduction,
+      await AdvanceTransaction.create({
+        employee: employee._id,
+        amount: deduction,
         date: paymentDate,
         method: method,
         type: 'DEDUCTED'
       });
     }
 
-    const paymentAmount = Number(amount) || 0;
-    const dailyWage = employee.dailyWage || 0;
-    const totalPaidAmount = paymentAmount;
-    let daysPaid = 0;
-    let carriedForwardSalary = 0;
+    const allocationResult = await allocateSalaryToPresentDays(employee, grossSettled);
 
-    if (dailyWage > 0 && totalPaidAmount > 0) {
-      daysPaid = totalPaidAmount / dailyWage;
-      let totalDaysToMove = daysPaid + (employee.partialPaidDays || 0);
-
-      const attendanceDoc = await Attendance.findOne({ employee: employee._id });
-      const presentDates = getPresentDates(attendanceDoc);
-
-      if (presentDates.length) {
-        let paidTillStr = null;
-        if (employee.paidTillDate) {
-          paidTillStr = toDateOnlyString(employee.paidTillDate);
-        }
-
-        for (const dateStr of presentDates) {
-          if (!paidTillStr || dateStr > paidTillStr) {
-            if (totalDaysToMove >= 1) {
-              employee.paidTillDate = new Date(dateStr);
-              totalDaysToMove -= 1;
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      employee.partialPaidDays = totalDaysToMove;
-    }
-
-    const attendanceDoc = await Attendance.findOne({ employee: employee._id });
-    const paidTillStr = employee.paidTillDate ? toDateOnlyString(employee.paidTillDate) : null;
-    const unpaidPresentDays = Math.max(
-      0,
-      getPresentDates(attendanceDoc).filter((dateStr) => !paidTillStr || dateStr > paidTillStr).length - (employee.partialPaidDays || 0)
-    );
-    carriedForwardSalary = unpaidPresentDays * dailyWage;
-
-    employee.payments.push({
+    await SalaryPayment.create({
+      employee: employee._id,
       amount: paymentAmount,
-      daysPaid,
-      paidThroughDate: employee.paidTillDate || null,
-      carriedForwardSalary,
+      advanceDeducted: deduction,
+      grossSettled,
+      daysPaid: allocationResult.daysPaid,
+      paidThroughDate: allocationResult.paidThroughDate,
+      carriedForwardSalary: allocationResult.carriedForwardSalary,
       date: paymentDate,
-      method
+      method,
+      allocations: allocationResult.allocations,
     });
 
-    await employee.save();
-    res.json(employee);
+    res.json(await buildEmployeePayload(employee));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -241,10 +240,15 @@ router.post('/:id/advance', async (req, res) => {
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
-    employee.advances.push({ amount, date: advDate, method });
-    
-    await employee.save();
-    res.json(employee);
+    await AdvanceTransaction.create({
+      employee: employee._id,
+      amount: Math.abs(Number(amount) || 0),
+      date: advDate,
+      method,
+      type: 'GIVEN',
+    });
+
+    res.json(await buildEmployeePayload(employee));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -295,7 +299,11 @@ router.delete('/:id', async (req, res) => {
       await deleteFromCloudinary(employee.profilePicture);
     }
 
-    await Attendance.deleteOne({ employee: req.params.id });
+    await Promise.all([
+      AttendanceDay.deleteMany({ employee: req.params.id }),
+      SalaryPayment.deleteMany({ employee: req.params.id }),
+      AdvanceTransaction.deleteMany({ employee: req.params.id }),
+    ]);
     res.json({ message: 'Employee deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });

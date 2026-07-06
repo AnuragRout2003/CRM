@@ -123,18 +123,17 @@ export default function EmployeeDetail() {
   // Remaining salary is earned wages still unpaid. Advances are tracked separately.
   const remainingSalary = useMemo(() => {
     if (!employee) return 0;
-    const earnedThisCycle = unpaidPresentDays * (employee.dailyWage || 0);
-    return Math.max(0, earnedThisCycle);
+    return Math.max(0, employee.remainingSalary ?? unpaidPresentDays * (employee.dailyWage || 0));
   }, [unpaidPresentDays, employee]);
 
   // Dynamic Payment Calculations
-  const wagesEarnedThisCycle = unpaidPresentDays * (employee?.dailyWage || 0);
+  const wagesEarnedThisCycle = remainingSalary;
   const totalWagesOwed = wagesEarnedThisCycle;
   const maxPossibleDeduction = Math.min(advanceBalance, totalWagesOwed);
   
   let appliedDeduction;
   if (deductedAdvanceInput === null) {
-    appliedDeduction = maxPossibleDeduction;
+    appliedDeduction = 0;
   } else if (deductedAdvanceInput === '') {
     appliedDeduction = 0;
   } else {
@@ -500,7 +499,7 @@ export default function EmployeeDetail() {
                         min="0" 
                         max={maxPossibleDeduction}
                         className="w-[90px] px-2 py-1 rounded-lg border border-slate-300 text-right text-red-600 font-bold text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
-                        value={deductedAdvanceInput === null ? maxPossibleDeduction : deductedAdvanceInput} 
+                        value={deductedAdvanceInput === null ? '' : deductedAdvanceInput} 
                         onChange={(e) => setDeductedAdvanceInput(e.target.value)} 
                       />
                     </div>

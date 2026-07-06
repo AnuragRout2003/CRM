@@ -137,7 +137,7 @@ export default function Dashboard() {
     // Financials
     const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
     const advanceBalance = emp.totalAdvance || 0;
-    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0));
+    const remaining = Math.max(0, emp.remainingSalary ?? workingDays * (emp.dailyWage || 0));
     
     totalPendingSalary += remaining;
     totalPendingAdvances += advanceBalance;
@@ -332,7 +332,7 @@ export default function Dashboard() {
                   {filtered.map((emp) => {
                     const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
                     const advanceBalance = emp.totalAdvance || 0;
-                    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0));
+                    const remaining = Math.max(0, emp.remainingSalary ?? workingDays * (emp.dailyWage || 0));
                     const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                     return (
@@ -414,7 +414,7 @@ export default function Dashboard() {
               {filtered.map((emp) => {
                 const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
                 const advanceBalance = emp.totalAdvance || 0;
-                const remaining = Math.max(0, workingDays * (emp.dailyWage || 0));
+                const remaining = Math.max(0, emp.remainingSalary ?? workingDays * (emp.dailyWage || 0));
                 const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                 return (
