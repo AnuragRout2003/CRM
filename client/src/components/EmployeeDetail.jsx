@@ -113,21 +113,26 @@ export default function EmployeeDetail() {
     return Object.values(monthData).filter((s) => s === 'present').length;
   }, [attendance, monthKey]);
 
-  // Advance after last payment
-  const advanceAfterLastPayment = useMemo(() => {
+  // Carried over unpaid wages
+  const carriedOverUnpaidWages = employee?.carriedOverUnpaidWages || 0;
+
+  // Advance Balance (total from all time)
+  const advanceBalance = useMemo(() => {
     if (!employee) return 0;
-    return employee.advanceAfterLastPayment || 0;
+    return employee.totalAdvance || 0;
   }, [employee]);
 
   // Remaining salary (Total available if 100% of advance is paid off)
   const remainingSalary = useMemo(() => {
     if (!employee) return 0;
-    return Math.max(0, workingDaysAfterLastPayment * (employee.dailyWage || 0) - advanceAfterLastPayment);
-  }, [workingDaysAfterLastPayment, advanceAfterLastPayment, employee]);
+    const earnedThisCycle = workingDaysAfterLastPayment * (employee.dailyWage || 0);
+    return Math.max(0, earnedThisCycle + carriedOverUnpaidWages - advanceBalance);
+  }, [workingDaysAfterLastPayment, carriedOverUnpaidWages, advanceBalance, employee]);
 
   // Dynamic Payment Calculations
-  const wagesEarned = workingDaysAfterLastPayment * (employee?.dailyWage || 0);
-  const maxPossibleDeduction = Math.min(advanceAfterLastPayment, wagesEarned);
+  const wagesEarnedThisCycle = workingDaysAfterLastPayment * (employee?.dailyWage || 0);
+  const totalWagesOwed = wagesEarnedThisCycle + carriedOverUnpaidWages;
+  const maxPossibleDeduction = Math.min(advanceBalance, totalWagesOwed);
   
   let appliedDeduction;
   if (deductedAdvanceInput === null) {
@@ -140,8 +145,10 @@ export default function EmployeeDetail() {
     if (appliedDeduction < 0) appliedDeduction = 0;
   }
   
-  const currentNetPayable = Math.max(0, wagesEarned - appliedDeduction);
-  const carryOverAdvance = advanceAfterLastPayment - appliedDeduction;
+  const currentNetPayable = Math.max(0, totalWagesOwed - appliedDeduction);
+  
+  const paymentAmountInput = Number(payForm.amount) || 0;
+  const newUnpaidWages = Math.max(0, currentNetPayable - paymentAmountInput);
 
   // Set of payment date strings for calendar markers (format: "YYYY-MM-DD")
   const paymentDates = useMemo(() => {
@@ -191,9 +198,9 @@ export default function EmployeeDetail() {
       return;
     }
     
-    // We validate against currentNetPayable, not remainingSalary
-    if (wagesEarned <= 0 && carryOverAdvance <= 0 && remainingSalary <= 0) {
-      showToast('Cannot make a payment when remaining salary is zero or negative', 'error');
+    // We validate against total net payable
+    if (totalWagesOwed <= 0 && remainingSalary <= 0) {
+      showToast('Cannot make a payment when remaining salary is zero', 'error');
       return;
     }
     if (amount > currentNetPayable) {
@@ -205,7 +212,8 @@ export default function EmployeeDetail() {
       await axios.post(`${API}/employees/${id}/payment`, {
         amount: parseFloat(payForm.amount),
         date: payForm.date || undefined,
-        carryOverAdvance: carryOverAdvance,
+        advanceDeducted: appliedDeduction,
+        wagesEarnedThisCycle: wagesEarnedThisCycle,
         method: payForm.method
       });
       await fetchData();
@@ -369,7 +377,7 @@ export default function EmployeeDetail() {
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Daily Wage</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Last Payment</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Days Worked ({MONTH_NAMES[month].slice(0, 3)})</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance (Since Pay)</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance Balance</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Remaining Salary</th>
               </tr>
             </thead>
@@ -380,8 +388,8 @@ export default function EmployeeDetail() {
                 <td className="px-4 py-3"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.lastPaymentDate)}</span></td>
                 <td className="px-4 py-3"><span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-bold">{daysWorkedThisMonth} days</span></td>
                 <td className="px-4 py-3">
-                  <span className={`font-semibold ${advanceAfterLastPayment > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                    {formatCurrency(advanceAfterLastPayment)}
+                  <span className={`font-semibold ${advanceBalance > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                    {formatCurrency(advanceBalance)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -412,8 +420,8 @@ export default function EmployeeDetail() {
             <span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-bold">{daysWorkedThisMonth} days</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-slate-100">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Advance (Since Pay)</span>
-            <span className={`font-semibold ${advanceAfterLastPayment > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(advanceAfterLastPayment)}</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Advance Balance</span>
+            <span className={`font-semibold ${advanceBalance > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(advanceBalance)}</span>
           </div>
           <div className="flex justify-between items-center py-2">
             <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Remaining Salary</span>
@@ -433,8 +441,8 @@ export default function EmployeeDetail() {
           <div className="text-xl md:text-2xl font-bold text-emerald-600">{workingDaysAfterLastPayment}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Advance (Since Pay)</div>
-          <div className="text-xl md:text-2xl font-bold text-amber-500">{formatCurrency(advanceAfterLastPayment)}</div>
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Advance Balance</div>
+          <div className="text-xl md:text-2xl font-bold text-amber-500">{formatCurrency(advanceBalance)}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Remaining Salary</div>
@@ -468,9 +476,16 @@ export default function EmployeeDetail() {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Wages Earned:</span>
-                    <span className="font-medium text-slate-800">{formatCurrency(wagesEarned)}</span>
+                    <span className="text-slate-500">Wages Earned (This Cycle):</span>
+                    <span className="font-medium text-slate-800">{formatCurrency(wagesEarnedThisCycle)}</span>
                   </div>
+
+                  {carriedOverUnpaidWages > 0 && (
+                    <div className="flex justify-between items-center text-[0.85rem]">
+                      <span className="text-slate-500">Previous Unpaid Wages:</span>
+                      <span className="font-medium text-emerald-600">+{formatCurrency(carriedOverUnpaidWages)}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">
@@ -490,10 +505,10 @@ export default function EmployeeDetail() {
                     </div>
                   </div>
 
-                  {carryOverAdvance > 0 && (
-                    <div className="flex justify-between items-center text-[0.85rem]">
-                      <span className="text-amber-500">Advance Carried Over:</span>
-                      <span className="text-amber-500 font-medium">{formatCurrency(carryOverAdvance)}</span>
+                  {newUnpaidWages > 0 && (
+                    <div className="flex justify-between items-center text-[0.85rem] mt-1 text-slate-500">
+                      <span>Unpaid Wages Carried Forward:</span>
+                      <span className="font-medium">{formatCurrency(newUnpaidWages)}</span>
                     </div>
                   )}
 
@@ -693,7 +708,8 @@ export default function EmployeeDetail() {
                           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(a.date)}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-semibold text-amber-600">{formatCurrency(a.amount)}</span>
+                          <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</span>
+                          {a.type === 'DEDUCTED' && <span className="ml-2 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">Deducted</span>}
                         </td>
                         <td className="px-4 py-3">
                           {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
@@ -712,8 +728,8 @@ export default function EmployeeDetail() {
                       {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500">{formatDate(a.date)}</span>
-                      <span className="font-semibold text-amber-600">{formatCurrency(a.amount)}</span>
+                      <span className="text-xs text-slate-500">{formatDate(a.date)} {a.type === 'DEDUCTED' && '(Deducted)'}</span>
+                      <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</span>
                     </div>
                   </div>
                 ))}

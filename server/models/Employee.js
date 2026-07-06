@@ -32,6 +32,11 @@ const advanceSchema = new mongoose.Schema({
     enum: ['CASH', 'UPI'],
     default: 'CASH',
   },
+  type: {
+    type: String,
+    enum: ['GIVEN', 'DEDUCTED'],
+    default: 'GIVEN',
+  },
 });
 
 const employeeSchema = new mongoose.Schema(
@@ -63,6 +68,10 @@ const employeeSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    carriedOverUnpaidWages: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -79,15 +88,7 @@ employeeSchema.virtual('totalAdvance').get(function () {
   return this.advances.reduce((sum, a) => sum + a.amount, 0);
 });
 
-// Virtual: advances after last payment
-employeeSchema.virtual('advanceAfterLastPayment').get(function () {
-  if (!this.lastPaymentDate) {
-    return this.advances.reduce((sum, a) => sum + a.amount, 0);
-  }
-  return this.advances
-    .filter((a) => new Date(a.date) > new Date(this.lastPaymentDate))
-    .reduce((sum, a) => sum + a.amount, 0);
-});
+// Virtual: advances after last payment is removed, use totalAdvance instead
 
 // Unique index on name (case-insensitive)
 employeeSchema.index({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });

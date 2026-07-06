@@ -136,19 +136,33 @@ const parseDateWithTime = (dateStr) => {
 // POST add salary payment to employee
 router.post('/:id/payment', async (req, res) => {
   try {
-    const { amount, date, carryOverAdvance, method = 'CASH' } = req.body;
+    const { amount, date, advanceDeducted, method = 'CASH', wagesEarnedThisCycle = 0 } = req.body;
     const paymentDate = parseDateWithTime(date);
 
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
-    employee.payments.push({ amount, date: paymentDate, method });
-    employee.lastPaymentDate = paymentDate;
-
-    if (carryOverAdvance && Number(carryOverAdvance) > 0) {
-      const carryOverDate = new Date(paymentDate.getTime() + 1);
-      employee.advances.push({ amount: Number(carryOverAdvance), date: carryOverDate, method });
+    const deduction = Number(advanceDeducted) || 0;
+    if (deduction > 0) {
+      employee.advances.push({
+        amount: -deduction,
+        date: paymentDate,
+        method: method,
+        type: 'DEDUCTED'
+      });
     }
+
+    const earned = Number(wagesEarnedThisCycle);
+    const prevUnpaid = employee.carriedOverUnpaidWages || 0;
+    const paymentAmount = Number(amount) || 0;
+    
+    const netPayable = (earned + prevUnpaid) - deduction;
+    const newUnpaidWages = netPayable - paymentAmount;
+    
+    employee.carriedOverUnpaidWages = Math.max(0, newUnpaidWages);
+    
+    employee.payments.push({ amount: paymentAmount, date: paymentDate, method });
+    employee.lastPaymentDate = paymentDate;
 
     await employee.save();
     res.json(employee);

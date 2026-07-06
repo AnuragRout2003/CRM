@@ -149,11 +149,12 @@ export default function Dashboard() {
   employees.forEach((emp) => {
     // Financials
     const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
-    const advanceAfter = emp.advanceAfterLastPayment || 0;
-    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0) - advanceAfter);
+    const advanceBalance = emp.totalAdvance || 0;
+    const unpaidWages = emp.carriedOverUnpaidWages || 0;
+    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) + unpaidWages - advanceBalance);
     
     totalPendingSalary += remaining;
-    totalPendingAdvances += advanceAfter;
+    totalPendingAdvances += advanceBalance;
 
     // Attendance
     const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
@@ -344,8 +345,9 @@ export default function Dashboard() {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((emp) => {
                     const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
-                    const advanceAfter = emp.advanceAfterLastPayment || 0;
-                    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0) - advanceAfter);
+                    const advanceBalance = emp.totalAdvance || 0;
+                    const unpaidWages = emp.carriedOverUnpaidWages || 0;
+                    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) + unpaidWages - advanceBalance);
                     const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                     return (
@@ -393,8 +395,8 @@ export default function Dashboard() {
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-700">{workingDays} days</span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className={`font-semibold ${advanceAfter > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                            {formatCurrency(advanceAfter)}
+                          <span className={`font-semibold ${advanceBalance > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                            {formatCurrency(advanceBalance)}
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
@@ -433,8 +435,9 @@ export default function Dashboard() {
             <div className="lg:hidden divide-y divide-slate-100">
               {filtered.map((emp) => {
                 const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
-                const advanceAfter = emp.advanceAfterLastPayment || 0;
-                const remaining = Math.max(0, workingDays * (emp.dailyWage || 0) - advanceAfter);
+                const advanceBalance = emp.totalAdvance || 0;
+                const unpaidWages = emp.carriedOverUnpaidWages || 0;
+                const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) + unpaidWages - advanceBalance);
                 const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                 return (
@@ -486,8 +489,8 @@ export default function Dashboard() {
                       </div>
                       <div className="bg-amber-50 rounded-lg px-3 py-2">
                         <p className="text-[10px] font-semibold text-slate-400 uppercase">Advance</p>
-                        <p className={`text-sm font-bold mt-0.5 ${advanceAfter > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                          {formatCurrency(advanceAfter)}
+                        <p className={`text-sm font-bold mt-0.5 ${advanceBalance > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                          {formatCurrency(advanceBalance)}
                         </p>
                       </div>
                       <div className="bg-emerald-50 rounded-lg px-3 py-2">
