@@ -109,7 +109,8 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       profilePicture: result.secure_url,
       payments: [],
       advances: [],
-      lastPaymentDate: null,
+      paidTillDate: null,
+      partialPaidDays: 0,
     });
 
     await employee.save();
@@ -152,17 +153,51 @@ router.post('/:id/payment', async (req, res) => {
       });
     }
 
-    const earned = Number(wagesEarnedThisCycle);
-    const prevUnpaid = employee.carriedOverUnpaidWages || 0;
     const paymentAmount = Number(amount) || 0;
-    
-    const netPayable = (earned + prevUnpaid) - deduction;
-    const newUnpaidWages = netPayable - paymentAmount;
-    
-    employee.carriedOverUnpaidWages = Math.max(0, newUnpaidWages);
+    const dailyWage = employee.dailyWage || 0;
+    const totalPaidAmount = paymentAmount + deduction;
+
+    if (dailyWage > 0 && totalPaidAmount > 0) {
+      const daysPaid = totalPaidAmount / dailyWage;
+      let totalDaysToMove = daysPaid + (employee.partialPaidDays || 0);
+
+      const attendanceDoc = await Attendance.findOne({ employee: employee._id });
+      if (attendanceDoc && attendanceDoc.attendance) {
+        const presentDates = [];
+        Object.entries(attendanceDoc.attendance).forEach(([month, days]) => {
+          if (days && typeof days === 'object') {
+            Object.entries(days).forEach(([day, status]) => {
+              if (status === 'present') {
+                presentDates.push(`${month}-${String(day).padStart(2, '0')}`);
+              }
+            });
+          }
+        });
+        
+        presentDates.sort();
+
+        let paidTillStr = null;
+        if (employee.paidTillDate) {
+          const pt = new Date(employee.paidTillDate);
+          paidTillStr = `${pt.getFullYear()}-${String(pt.getMonth() + 1).padStart(2, '0')}-${String(pt.getDate()).padStart(2, '0')}`;
+        }
+
+        for (const dateStr of presentDates) {
+          if (!paidTillStr || dateStr > paidTillStr) {
+            if (totalDaysToMove >= 1) {
+              employee.paidTillDate = new Date(dateStr);
+              totalDaysToMove -= 1;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+      
+      employee.partialPaidDays = totalDaysToMove;
+    }
     
     employee.payments.push({ amount: paymentAmount, date: paymentDate, method });
-    employee.lastPaymentDate = paymentDate;
 
     await employee.save();
     res.json(employee);

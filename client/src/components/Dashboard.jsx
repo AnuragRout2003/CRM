@@ -148,10 +148,9 @@ export default function Dashboard() {
 
   employees.forEach((emp) => {
     // Financials
-    const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
+    const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
     const advanceBalance = emp.totalAdvance || 0;
-    const unpaidWages = emp.carriedOverUnpaidWages || 0;
-    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) + unpaidWages - advanceBalance);
+    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) - advanceBalance);
     
     totalPendingSalary += remaining;
     totalPendingAdvances += advanceBalance;
@@ -335,8 +334,8 @@ export default function Dashboard() {
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Daily Wage</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Payment</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Working Days</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paid Till</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Unpaid Days</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Advance</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Remaining Salary</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Today</th>
@@ -344,10 +343,9 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((emp) => {
-                    const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
+                    const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
                     const advanceBalance = emp.totalAdvance || 0;
-                    const unpaidWages = emp.carriedOverUnpaidWages || 0;
-                    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) + unpaidWages - advanceBalance);
+                    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) - advanceBalance);
                     const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                     return (
@@ -389,7 +387,7 @@ export default function Dashboard() {
                           )}
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{formatDate(emp.lastPaymentDate)}</span>
+                          <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{formatDate(emp.paidTillDate)}</span>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-700">{workingDays} days</span>
@@ -434,10 +432,9 @@ export default function Dashboard() {
             {/* ── MOBILE CARDS (< lg) ── */}
             <div className="lg:hidden divide-y divide-slate-100">
               {filtered.map((emp) => {
-                const workingDays = getWorkingDaysAfter(emp._id, emp.lastPaymentDate);
+                const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
                 const advanceBalance = emp.totalAdvance || 0;
-                const unpaidWages = emp.carriedOverUnpaidWages || 0;
-                const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) + unpaidWages - advanceBalance);
+                const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) - advanceBalance);
                 const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                 return (
@@ -455,7 +452,7 @@ export default function Dashboard() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-slate-800 truncate">{emp.name}</p>
-                        <p className="text-xs text-slate-400">Last paid: {formatDate(emp.lastPaymentDate)}</p>
+                        <p className="text-xs text-slate-400">Paid Till: {formatDate(emp.paidTillDate)}</p>
                       </div>
                     </div>
 
@@ -484,7 +481,7 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="bg-sky-50 rounded-lg px-3 py-2">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase">Working Days</p>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase">Unpaid Days</p>
                         <p className="text-sm font-bold text-sky-700 mt-0.5">{workingDays} days</p>
                       </div>
                       <div className="bg-amber-50 rounded-lg px-3 py-2">

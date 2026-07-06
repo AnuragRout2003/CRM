@@ -104,6 +104,15 @@ export default function AttendanceView() {
     };
   };
 
+  const getPaidTillDateStr = (employee) => {
+    if (!employee?.paidTillDate) return null;
+    const paidTill = new Date(employee.paidTillDate);
+    const year = paidTill.getFullYear();
+    const month = String(paidTill.getMonth() + 1).padStart(2, '0');
+    const day = String(paidTill.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getStatus = (empId, date) => {
     const record = attendanceMap[empId];
     if (!record || !record.attendance) return null;
@@ -168,8 +177,11 @@ export default function AttendanceView() {
   };
 
   // Shared helper for computing cell lock/status info (used in both mobile & desktop)
-  const getCellInfo = (empId, date) => {
+  const getCellInfo = (emp, date) => {
+    const empId = emp._id;
     const status = getStatus(empId, date);
+    const { fullDateStr } = getDateKeys(date);
+    const paidTillDateStr = getPaidTillDateStr(emp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const cellDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -179,7 +191,8 @@ export default function AttendanceView() {
     sevenDaysFuture.setDate(today.getDate() + 7);
     const isLocked = cellDate < sevenDaysAgo || cellDate > sevenDaysFuture;
     const isToday = today.getTime() === cellDate.getTime();
-    return { status, isLocked, isToday };
+    const isPaid = status === 'present' && paidTillDateStr && fullDateStr <= paidTillDateStr;
+    return { status, isLocked, isToday, isPaid };
   };
 
   if (loading) {
@@ -249,6 +262,10 @@ export default function AttendanceView() {
               Present
             </span>
             <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-emerald-600 border border-emerald-700"></span>
+              Paid
+            </span>
+            <span className="flex items-center gap-1.5">
               <span className="inline-block w-3 h-3 rounded-sm bg-red-500/15 border border-red-500/40"></span>
               Absent
             </span>
@@ -307,7 +324,7 @@ export default function AttendanceView() {
                       </div>
                     </td>
                     {weekDates.map((date, i) => {
-                      const { status, isLocked } = getCellInfo(emp._id, date);
+                      const { status, isLocked, isPaid } = getCellInfo(emp, date);
 
                       let cellClasses = 'text-center select-none transition-all duration-150 border-r border-slate-100 h-[60px] relative';
                       let content;
@@ -318,7 +335,10 @@ export default function AttendanceView() {
                         cellClasses += ' cursor-pointer';
                       }
 
-                      if (status === 'present') {
+                      if (isPaid) {
+                        cellClasses += ' bg-emerald-600 text-white font-bold';
+                        content = <span title="Paid present day">Paid</span>;
+                      } else if (status === 'present') {
                         cellClasses += ' bg-emerald-500/20 text-emerald-600 font-bold';
                         content = <span>P</span>;
                       } else if (status === 'absent') {
@@ -382,7 +402,7 @@ export default function AttendanceView() {
                   {/* Day circles row */}
                   <div className="grid grid-cols-7 gap-1.5">
                     {weekDates.map((date, i) => {
-                      const { status, isLocked, isToday } = getCellInfo(emp._id, date);
+                      const { status, isLocked, isToday, isPaid } = getCellInfo(emp, date);
                       const dayNum = date.getDate();
                       const dayLabel = date.toLocaleDateString('en-IN', { weekday: 'narrow' });
 
@@ -395,7 +415,9 @@ export default function AttendanceView() {
                         circleClasses += ' cursor-pointer active:scale-95';
                       }
 
-                      if (status === 'present') {
+                      if (isPaid) {
+                        circleClasses += ' bg-emerald-600 border border-emerald-700';
+                      } else if (status === 'present') {
                         circleClasses += ' bg-emerald-500/20 border border-emerald-500/30';
                       } else if (status === 'absent') {
                         circleClasses += ' bg-red-500/20 border border-red-500/30';
@@ -417,7 +439,9 @@ export default function AttendanceView() {
                           <span className="text-[9px] font-medium text-slate-400 leading-none">{dayLabel}</span>
                           <span
                             className={`text-xs font-bold leading-tight mt-0.5 ${
-                              status === 'present'
+                              isPaid
+                                ? 'text-white'
+                                : status === 'present'
                                 ? 'text-emerald-600'
                                 : status === 'absent'
                                 ? 'text-red-600'
@@ -426,7 +450,10 @@ export default function AttendanceView() {
                           >
                             {dayNum}
                           </span>
-                          {status === 'present' && (
+                          {isPaid && (
+                            <span className="text-[8px] font-bold text-white leading-none mt-0.5">Paid</span>
+                          )}
+                          {!isPaid && status === 'present' && (
                             <span className="text-[8px] font-bold text-emerald-600 leading-none mt-0.5">P</span>
                           )}
                           {status === 'absent' && (

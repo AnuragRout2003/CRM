@@ -64,11 +64,11 @@ const employeeSchema = new mongoose.Schema(
       type: [advanceSchema],
       default: [],
     },
-    lastPaymentDate: {
+    paidTillDate: {
       type: Date,
       default: null,
     },
-    carriedOverUnpaidWages: {
+    partialPaidDays: {
       type: Number,
       default: 0,
     },

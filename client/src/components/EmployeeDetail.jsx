@@ -85,25 +85,27 @@ export default function EmployeeDetail() {
 
   // ── Computed values ──────────────────────────
 
-  // Working days after last payment (from attendance)
-  const workingDaysAfterLastPayment = useMemo(() => {
+  const paidTillDateStr = useMemo(() => {
+    if (!employee?.paidTillDate) return null;
+    const pt = new Date(employee.paidTillDate);
+    return `${pt.getFullYear()}-${String(pt.getMonth() + 1).padStart(2, '0')}-${String(pt.getDate()).padStart(2, '0')}`;
+  }, [employee]);
+
+  // Working days after the latest paid-through date (from attendance)
+  const workingDaysAfterPaidTill = useMemo(() => {
     if (!attendance?.attendance || !employee) return 0;
-    // Compare using date-only strings (YYYY-MM-DD) to avoid timezone issues
-    let afterDateStr = null;
-    if (employee.lastPaymentDate) {
-      const lp = new Date(employee.lastPaymentDate);
-      afterDateStr = `${lp.getFullYear()}-${String(lp.getMonth() + 1).padStart(2, '0')}-${String(lp.getDate()).padStart(2, '0')}`;
-    }
     let count = 0;
     Object.entries(attendance.attendance).forEach(([mk, days]) => {
       Object.entries(days).forEach(([dayStr, status]) => {
         if (status !== 'present') return;
         const fullDateStr = `${mk}-${dayStr}`;
-        if (!afterDateStr || fullDateStr > afterDateStr) count++;
+        if (!paidTillDateStr || fullDateStr > paidTillDateStr) count++;
       });
     });
     return count;
-  }, [attendance, employee]);
+  }, [attendance, employee, paidTillDateStr]);
+
+  const unpaidPresentDays = Math.max(0, workingDaysAfterPaidTill - (employee?.partialPaidDays || 0));
 
   // Days worked in the currently viewed month
   const daysWorkedThisMonth = useMemo(() => {
@@ -125,13 +127,13 @@ export default function EmployeeDetail() {
   // Remaining salary (Total available if 100% of advance is paid off)
   const remainingSalary = useMemo(() => {
     if (!employee) return 0;
-    const earnedThisCycle = workingDaysAfterLastPayment * (employee.dailyWage || 0);
-    return Math.max(0, earnedThisCycle + carriedOverUnpaidWages - advanceBalance);
-  }, [workingDaysAfterLastPayment, carriedOverUnpaidWages, advanceBalance, employee]);
+    const earnedThisCycle = unpaidPresentDays * (employee.dailyWage || 0);
+    return Math.max(0, earnedThisCycle - advanceBalance);
+  }, [unpaidPresentDays, advanceBalance, employee]);
 
   // Dynamic Payment Calculations
-  const wagesEarnedThisCycle = workingDaysAfterLastPayment * (employee?.dailyWage || 0);
-  const totalWagesOwed = wagesEarnedThisCycle + carriedOverUnpaidWages;
+  const wagesEarnedThisCycle = unpaidPresentDays * (employee?.dailyWage || 0);
+  const totalWagesOwed = wagesEarnedThisCycle;
   const maxPossibleDeduction = Math.min(advanceBalance, totalWagesOwed);
   
   let appliedDeduction;
@@ -148,6 +150,9 @@ export default function EmployeeDetail() {
   const currentNetPayable = Math.max(0, totalWagesOwed - appliedDeduction);
   
   const paymentAmountInput = Number(payForm.amount) || 0;
+  const paidDaysWorth = employee?.dailyWage > 0
+    ? (paymentAmountInput + appliedDeduction) / employee.dailyWage
+    : 0;
   const newUnpaidWages = Math.max(0, currentNetPayable - paymentAmountInput);
 
   // Set of payment date strings for calendar markers (format: "YYYY-MM-DD")
@@ -296,7 +301,8 @@ export default function EmployeeDetail() {
 
     const hasPayment = paymentDates.has(dateKey);
     const hasAdvance = advanceDates.has(dateKey);
-    calendarCells.push({ day: d, dayStr, status, isToday, hasPayment, hasAdvance, isLocked, key: `d-${d}` });
+    const isPaid = status === 'present' && paidTillDateStr && dateKey <= paidTillDateStr;
+    calendarCells.push({ day: d, dayStr, status, isToday, hasPayment, hasAdvance, isLocked, isPaid, key: `d-${d}` });
   }
 
   // ── Render ───────────────────────────────────
@@ -375,8 +381,8 @@ export default function EmployeeDetail() {
               <tr className="bg-slate-50 text-left">
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Name</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Daily Wage</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Last Payment</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Days Worked ({MONTH_NAMES[month].slice(0, 3)})</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Paid Till</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Unpaid Days ({MONTH_NAMES[month].slice(0, 3)})</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance Balance</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Remaining Salary</th>
               </tr>
@@ -385,7 +391,7 @@ export default function EmployeeDetail() {
               <tr className="border-t border-slate-100">
                 <td className="px-4 py-3 font-semibold text-slate-900">{employee.name}</td>
                 <td className="px-4 py-3 font-semibold text-sky-700">{formatCurrency(employee.dailyWage)}</td>
-                <td className="px-4 py-3"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.lastPaymentDate)}</span></td>
+                <td className="px-4 py-3"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.paidTillDate)}</span></td>
                 <td className="px-4 py-3"><span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-bold">{daysWorkedThisMonth} days</span></td>
                 <td className="px-4 py-3">
                   <span className={`font-semibold ${advanceBalance > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
@@ -412,8 +418,8 @@ export default function EmployeeDetail() {
             <span className="font-semibold text-sky-700">{formatCurrency(employee.dailyWage)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-slate-100">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Payment</span>
-            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.lastPaymentDate)}</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Paid Till</span>
+            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.paidTillDate)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-slate-100">
             <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Days Worked ({MONTH_NAMES[month].slice(0, 3)})</span>
@@ -437,8 +443,8 @@ export default function EmployeeDetail() {
           <div className="text-xl md:text-2xl font-bold text-sky-600">{formatCurrency(employee.dailyWage)}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Working Days (Since Pay)</div>
-          <div className="text-xl md:text-2xl font-bold text-emerald-600">{workingDaysAfterLastPayment}</div>
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Unpaid Present Days</div>
+          <div className="text-xl md:text-2xl font-bold text-emerald-600">{unpaidPresentDays}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Advance Balance</div>
@@ -476,16 +482,14 @@ export default function EmployeeDetail() {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Wages Earned (This Cycle):</span>
+                    <span className="text-slate-500">Unpaid Wages:</span>
                     <span className="font-medium text-slate-800">{formatCurrency(wagesEarnedThisCycle)}</span>
                   </div>
 
-                  {carriedOverUnpaidWages > 0 && (
-                    <div className="flex justify-between items-center text-[0.85rem]">
-                      <span className="text-slate-500">Previous Unpaid Wages:</span>
-                      <span className="font-medium text-emerald-600">+{formatCurrency(carriedOverUnpaidWages)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Days This Payment Covers:</span>
+                    <span className="font-medium text-slate-800">{paidDaysWorth.toFixed(2)} days</span>
+                  </div>
                   
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">
@@ -575,13 +579,14 @@ export default function EmployeeDetail() {
         </div>
         <div className="p-3 md:p-5">
           {/* Legend */}
-          <div className="flex flex-wrap gap-3 md:gap-5 mb-4 text-xs font-medium text-slate-600">
-            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present</div>
-            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Absent</div>
-            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Unmarked</div>
-            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> 💰 Payment</div>
-            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-violet-400" /> 📤 Advance</div>
-          </div>
+            <div className="flex flex-wrap gap-3 md:gap-5 mb-4 text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present (Unpaid)</div>
+              <div className="flex items-center gap-1.5"><span className="text-[12px]">✅</span> Paid</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Absent</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Unmarked</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> 💰 Payment</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-violet-400" /> 📤 Advance</div>
+            </div>
 
           {/* Calendar Grid (uses custom CSS classes) */}
           <div className="calendar-grid">
@@ -602,6 +607,7 @@ export default function EmployeeDetail() {
                   <div className="flex gap-0.5">
                     {cell.hasPayment && <span className="text-[10px]" title="Payment made">💰</span>}
                     {cell.hasAdvance && <span className="text-[10px]" title="Advance given">📤</span>}
+                    {cell.isPaid && <span className="text-[10px]" title="Paid">✅</span>}
                   </div>
 
                   <div className="flex gap-1 mt-auto">
