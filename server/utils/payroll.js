@@ -27,6 +27,18 @@ const buildAttendanceMap = (attendanceDays) => {
   return attendance;
 };
 
+const buildPaidAttendanceMap = (attendanceDays) => {
+  const paidAttendance = {};
+  attendanceDays.forEach((day) => {
+    if ((day.paidAmount || 0) <= 0) return;
+    const [year, month, date] = day.dateKey.split('-');
+    const monthKey = `${year}-${month}`;
+    if (!paidAttendance[monthKey]) paidAttendance[monthKey] = {};
+    paidAttendance[monthKey][date] = day.paidAmount;
+  });
+  return paidAttendance;
+};
+
 const migrateLegacyAttendanceForEmployee = async (employeeId) => {
   const employee = await Employee.findById(employeeId);
   if (!employee) return;
@@ -198,6 +210,7 @@ const buildAttendanceRecordForEmployee = async (employee) => {
     employee: employee._id,
     employeeName: employee.name,
     attendance: buildAttendanceMap(days),
+    paidAttendance: buildPaidAttendanceMap(days),
   };
 };
 

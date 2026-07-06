@@ -126,7 +126,11 @@ export default function AttendanceView() {
     return 'unmarked';
   };
 
-  const handleCellClick = async (empId, date) => {
+  const handleCellClick = async (emp, date) => {
+    const { isLocked } = getCellInfo(emp, date);
+    if (isLocked) return;
+
+    const empId = emp._id;
     const currentStatus = getStatus(empId, date);
     const nextStatus = getNextStatus(currentStatus);
     const { fullDateStr } = getDateKeys(date);
@@ -174,7 +178,9 @@ export default function AttendanceView() {
   const getCellInfo = (emp, date) => {
     const empId = emp._id;
     const status = getStatus(empId, date);
-    const { fullDateStr } = getDateKeys(date);
+    const { monthKey, dayKey, fullDateStr } = getDateKeys(date);
+    const record = attendanceMap[empId];
+    const paidAmount = record?.paidAttendance?.[monthKey]?.[dayKey] || 0;
     const paidTillDateStr = getPaidTillDateStr(emp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -182,7 +188,7 @@ export default function AttendanceView() {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
     const isToday = today.getTime() === cellDate.getTime();
-    const isPaid = status === 'present' && paidTillDateStr && fullDateStr <= paidTillDateStr;
+    const isPaid = paidAmount > 0 || (status === 'present' && paidTillDateStr && fullDateStr <= paidTillDateStr);
     const isLocked = cellDate < sevenDaysAgo || cellDate > today || isPaid;
     return { status, isLocked, isToday, isPaid };
   };
@@ -349,7 +355,8 @@ export default function AttendanceView() {
                         <td
                           key={i}
                           className={cellClasses}
-                          onClick={() => !isLocked && handleCellClick(emp._id, date)}
+                          aria-disabled={isLocked}
+                          onClick={isLocked ? undefined : () => handleCellClick(emp, date)}
                         >
                           {content}
                           {isLocked && (
@@ -426,7 +433,7 @@ export default function AttendanceView() {
                           key={i}
                           className={circleClasses}
                           disabled={isLocked}
-                          onClick={() => !isLocked && handleCellClick(emp._id, date)}
+                          onClick={isLocked ? undefined : () => handleCellClick(emp, date)}
                         >
                           <span className="text-[9px] font-medium text-slate-400 leading-none">{dayLabel}</span>
                           <span

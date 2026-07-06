@@ -294,10 +294,11 @@ export default function EmployeeDetail() {
     const status = monthData[dayStr] || null;
     const isToday = isCurrentMonth && today.getDate() === d;
     const dateKey = `${monthKey}-${dayStr}`;
+    const paidAmount = attendance?.paidAttendance?.[monthKey]?.[dayStr] || 0;
 
     const hasPayment = paymentDates.has(dateKey);
     const hasAdvance = advanceDates.has(dateKey);
-    const isPaid = status === 'present' && paidTillDateStr && dateKey <= paidTillDateStr;
+    const isPaid = paidAmount > 0 || (status === 'present' && paidTillDateStr && dateKey <= paidTillDateStr);
     calendarCells.push({ day: d, dayStr, status, isToday, hasPayment, hasAdvance, isPaid, key: `d-${d}` });
   }
 
