@@ -51,13 +51,14 @@ router.put('/employee/:employeeId/mark', async (req, res) => {
       return res.status(400).json({ error: 'status must be "present", "absent", or "unmarked"' });
     }
 
-    const inputDate = new Date(date);
+    const inputDate = new Date(`${date}T00:00:00`);
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    const sevenDaysFuture = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
     
-    if (inputDate < sevenDaysAgo || inputDate > sevenDaysFuture) {
-      return res.status(400).json({ error: 'Cannot modify attendance outside the 7-day window.' });
+    if (inputDate < sevenDaysAgo || inputDate > today) {
+      return res.status(400).json({ error: 'Cannot modify attendance outside the last 7 days through today.' });
     }
 
     const [year, month, day] = date.split('-');
@@ -89,41 +90,6 @@ router.put('/employee/:employeeId/mark', async (req, res) => {
     } else {
       record.attendance.get(monthKey).set(dayKey, status);
     }
-    record.markModified('attendance');
-
-    await record.save();
-    res.json(record);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// PUT bulk mark attendance for a month
-// Body: { month: "2026-07", days: { "01": "present", "02": "absent", ... } }
-router.put('/employee/:employeeId/bulk', async (req, res) => {
-  try {
-    const { month, days } = req.body;
-
-    if (!month || !days) {
-      return res.status(400).json({ error: 'month and days are required' });
-    }
-
-    let record = await Attendance.findOne({ employee: req.params.employeeId });
-
-    if (!record) {
-      const employee = await Employee.findById(req.params.employeeId);
-      if (!employee) return res.status(404).json({ error: 'Employee not found' });
-
-      record = new Attendance({
-        employee: employee._id,
-        employeeName: employee.name,
-        attendance: new Map(),
-      });
-    }
-
-    // Set the entire month map
-    const monthMap = new Map(Object.entries(days));
-    record.attendance.set(month, monthMap);
     record.markModified('attendance');
 
     await record.save();

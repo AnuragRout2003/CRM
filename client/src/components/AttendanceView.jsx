@@ -170,12 +170,6 @@ export default function AttendanceView() {
     }
   };
 
-  const isDateOlderThan7Days = (date) => {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    return date < sevenDaysAgo;
-  };
-
   // Shared helper for computing cell lock/status info (used in both mobile & desktop)
   const getCellInfo = (emp, date) => {
     const empId = emp._id;
@@ -187,9 +181,7 @@ export default function AttendanceView() {
     const cellDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
-    const sevenDaysFuture = new Date(today);
-    sevenDaysFuture.setDate(today.getDate() + 7);
-    const isLocked = cellDate < sevenDaysAgo || cellDate > sevenDaysFuture;
+    const isLocked = cellDate < sevenDaysAgo || cellDate > today;
     const isToday = today.getTime() === cellDate.getTime();
     const isPaid = status === 'present' && paidTillDateStr && fullDateStr <= paidTillDateStr;
     return { status, isLocked, isToday, isPaid };
