@@ -750,7 +750,7 @@ export default function EmployeeDetail() {
                     <span>#</span>
                     <span>Date</span>
                     <span className="text-right">Previous</span>
-                    <span className="text-right">Change</span>
+                    <span className="text-center">Change</span>
                     <span className="text-right">Balance</span>
                     <span className="text-right">Method</span>
                   </div>
@@ -760,9 +760,9 @@ export default function EmployeeDetail() {
                         <span className="text-slate-400">{i + 1}</span>
                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium justify-self-start whitespace-nowrap">{formatDate(a.date)}</span>
                         <span className="text-right font-semibold tabular-nums text-slate-600">{formatCurrency(a.previousAdvance)}</span>
-                        <span className={`text-right font-semibold tabular-nums ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        <span className={`flex items-center justify-center gap-1 font-semibold tabular-nums ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                           {formatCurrency(a.amount)}
-                          {a.type === 'DEDUCTED' && <span className="ml-1 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase align-middle">Deducted</span>}
+                          {a.type === 'DEDUCTED' && <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">Deducted</span>}
                         </span>
                         <span className="text-right font-bold tabular-nums text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
                         <span className="justify-self-end">
