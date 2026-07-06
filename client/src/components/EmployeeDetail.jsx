@@ -256,7 +256,7 @@ export default function EmployeeDetail() {
     try {
       await axios.put(`${API}/employees/${id}`, {
         name: editForm.name,
-        dailyWage: parseFloat(editForm.dailyWage) || 0,
+        dailyWage: Math.round(Number(editForm.dailyWage)) || 0,
       });
       await fetchData();
       setEditModal(false);
@@ -779,8 +779,8 @@ export default function EmployeeDetail() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="edit-wage">Daily Wage (₹)</label>
-                  <input id="edit-wage" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
-                    value={editForm.dailyWage} onChange={(e) => setEditForm(p => ({ ...p, dailyWage: e.target.value }))} />
+                  <input id="edit-wage" type="number" step="1" min="1" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
+                    value={editForm.dailyWage} onChange={(e) => setEditForm(p => ({ ...p, dailyWage: e.target.value }))} onWheel={(e) => e.currentTarget.blur()} />
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">

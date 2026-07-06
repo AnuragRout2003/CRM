@@ -49,7 +49,7 @@ export default function Dashboard() {
   };
 
   const handleUpdateWage = async (empId) => {
-    const newWage = parseFloat(editingWage.value);
+    const newWage = Math.round(Number(editingWage.value));
     if (isNaN(newWage) || newWage < 0) {
       showToast('Enter a valid wage', 'error');
       setEditingWage({ id: null, value: '' });
@@ -360,8 +360,10 @@ export default function Dashboard() {
                               onChange={(e) => setEditingWage(prev => ({ ...prev, value: e.target.value }))}
                               onBlur={() => handleUpdateWage(emp._id)}
                               onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateWage(emp._id); if (e.key === 'Escape') setEditingWage({ id: null, value: '' }); }}
+                              onWheel={(e) => e.currentTarget.blur()}
                               autoFocus
                               min="0"
+                              step="1"
                             />
                           ) : (
                             <span
@@ -448,8 +450,10 @@ export default function Dashboard() {
                             onChange={(e) => setEditingWage(prev => ({ ...prev, value: e.target.value }))}
                             onBlur={() => handleUpdateWage(emp._id)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateWage(emp._id); if (e.key === 'Escape') setEditingWage({ id: null, value: '' }); }}
+                            onWheel={(e) => e.currentTarget.blur()}
                             autoFocus
                             min="0"
+                            step="1"
                           />
                         ) : (
                           <p

@@ -142,6 +142,56 @@ const getAttendanceDaysForEmployee = async (employeeId) => {
   return AttendanceDay.find({ employee: employeeId }).sort({ dateKey: 1 });
 };
 
+const rebuildPaidAmountsForEmployee = async (employee) => {
+  const presentDays = await AttendanceDay.find({
+    employee: employee._id,
+    status: 'present',
+  }).sort({ dateKey: 1 });
+  const payments = await SalaryPayment.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 });
+
+  for (const day of presentDays) {
+    if ((day.paidAmount || 0) !== 0) {
+      day.paidAmount = 0;
+      await day.save();
+    }
+  }
+
+  let dayIndex = 0;
+  for (const payment of payments) {
+    let amountLeft = payment.grossSettled ?? ((payment.amount || 0) + (payment.advanceDeducted || 0));
+    const allocations = [];
+
+    while (amountLeft > 0 && dayIndex < presentDays.length) {
+      const day = presentDays[dayIndex];
+      const wage = day.wageForThatDay || employee.dailyWage || 0;
+      const unpaidForDay = Math.max(0, wage - (day.paidAmount || 0));
+
+      if (unpaidForDay <= 0) {
+        dayIndex += 1;
+        continue;
+      }
+
+      const applied = Math.min(amountLeft, unpaidForDay);
+      day.paidAmount = (day.paidAmount || 0) + applied;
+      await day.save();
+
+      allocations.push({
+        attendanceDay: day._id,
+        dateKey: day.dateKey,
+        amount: applied,
+      });
+
+      amountLeft -= applied;
+      if (day.paidAmount >= wage) dayIndex += 1;
+    }
+
+    if (JSON.stringify(payment.allocations || []) !== JSON.stringify(allocations)) {
+      payment.allocations = allocations;
+      await payment.save();
+    }
+  }
+};
+
 const buildAttendanceRecordForEmployee = async (employee) => {
   const days = await getAttendanceDaysForEmployee(employee._id);
   return {
@@ -159,14 +209,19 @@ const getAllAttendanceRecords = async () => {
 
 const getEmployeePayrollSnapshot = async (employee) => {
   await migrateLegacyTransactionsForEmployee(employee);
-  const attendanceDays = await getAttendanceDaysForEmployee(employee._id);
+  await getAttendanceDaysForEmployee(employee._id);
+  await rebuildPaidAmountsForEmployee(employee);
+  const attendanceDays = await AttendanceDay.find({ employee: employee._id }).sort({ dateKey: 1 });
   const payments = await SalaryPayment.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 });
   const advanceTransactions = await AdvanceTransaction.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 });
 
   const presentDays = attendanceDays.filter((day) => day.status === 'present');
   const totalEarned = presentDays.reduce((sum, day) => sum + (day.wageForThatDay || employee.dailyWage || 0), 0);
-  const salaryPaid = presentDays.reduce((sum, day) => sum + Math.min(day.paidAmount || 0, day.wageForThatDay || employee.dailyWage || 0), 0);
-  const remainingSalary = Math.max(0, totalEarned - salaryPaid);
+  const salarySettled = payments.reduce(
+    (sum, payment) => sum + (payment.grossSettled ?? ((payment.amount || 0) + (payment.advanceDeducted || 0))),
+    0
+  );
+  const remainingSalary = Math.max(0, totalEarned - salarySettled);
 
   const fullyPaidPresentDays = presentDays.filter((day) => (day.paidAmount || 0) >= (day.wageForThatDay || employee.dailyWage || 0));
   const paidTillDate = fullyPaidPresentDays.length
@@ -225,6 +280,7 @@ module.exports = {
   buildAttendanceRecordForEmployee,
   getAllAttendanceRecords,
   getAttendanceDaysForEmployee,
+  rebuildPaidAmountsForEmployee,
   getEmployeePayrollSnapshot,
   buildEmployeePayload,
 };

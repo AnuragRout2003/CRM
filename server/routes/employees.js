@@ -109,10 +109,11 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
 
     // Upload to Cloudinary
     const result = await uploadToCloudinary(req.file.buffer);
+    const parsedDailyWage = parseDailyWage(dailyWage);
 
     const employee = new Employee({
       name: name.trim(),
-      dailyWage: parseFloat(dailyWage) || 0,
+      dailyWage: parsedDailyWage,
       profilePicture: result.secure_url,
     });
 
@@ -135,6 +136,14 @@ const parseDateWithTime = (dateStr) => {
     d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
   }
   return d;
+};
+
+const parseDailyWage = (value) => {
+  const wage = Math.round(Number(value));
+  if (!Number.isFinite(wage) || wage <= 0) {
+    throw new Error('Daily wage must be a positive whole number');
+  }
+  return wage;
 };
 
 const allocateSalaryToPresentDays = async (employee, grossSettled) => {
@@ -174,12 +183,10 @@ const allocateSalaryToPresentDays = async (employee, grossSettled) => {
     amountLeft -= applied;
   }
 
-  const snapshot = await getEmployeePayrollSnapshot(employee);
   return {
     allocations,
     daysPaid,
     paidThroughDate,
-    carriedForwardSalary: snapshot.remainingSalary,
   };
 };
 
@@ -200,6 +207,7 @@ router.post('/:id/payment', async (req, res) => {
       return res.status(400).json({ error: 'Payment amount must be greater than zero' });
     }
 
+    const beforePaymentSnapshot = await getEmployeePayrollSnapshot(employee);
     if (deduction > 0) {
       await AdvanceTransaction.create({
         employee: employee._id,
@@ -211,6 +219,7 @@ router.post('/:id/payment', async (req, res) => {
     }
 
     const allocationResult = await allocateSalaryToPresentDays(employee, grossSettled);
+    const carriedForwardSalary = Math.max(0, beforePaymentSnapshot.remainingSalary - grossSettled);
 
     await SalaryPayment.create({
       employee: employee._id,
@@ -219,7 +228,7 @@ router.post('/:id/payment', async (req, res) => {
       grossSettled,
       daysPaid: allocationResult.daysPaid,
       paidThroughDate: allocationResult.paidThroughDate,
-      carriedForwardSalary: allocationResult.carriedForwardSalary,
+      carriedForwardSalary,
       date: paymentDate,
       method,
       allocations: allocationResult.allocations,
@@ -258,7 +267,7 @@ router.post('/:id/advance', async (req, res) => {
 router.put('/:id', upload.single('profilePicture'), async (req, res) => {
   try {
     const { name, dailyWage } = req.body;
-    const updateData = { name, dailyWage };
+    const updateData = { name, dailyWage: parseDailyWage(dailyWage) };
     
     const oldEmp = await Employee.findById(req.params.id);
     if (!oldEmp) return res.status(404).json({ error: 'Employee not found' });

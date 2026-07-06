@@ -186,8 +186,10 @@ export default function AddEmployee() {
                 className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition-all duration-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none hover:border-slate-400"
                 placeholder="e.g. 500"
                 min="1"
+                step="1"
                 value={form.dailyWage}
                 onChange={handleChange}
+                onWheel={(e) => e.currentTarget.blur()}
               />
             </div>
 
