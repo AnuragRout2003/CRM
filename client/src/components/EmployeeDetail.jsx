@@ -745,27 +745,27 @@ export default function EmployeeDetail() {
             <>
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-                <div className="min-w-[860px]">
-                  <div className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_90px] items-center gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                <div className="min-w-[900px]">
+                  <div className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] items-center gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
                     <span>#</span>
                     <span>Date</span>
-                    <span className="text-right">Previous</span>
+                    <span className="text-center">Previous</span>
                     <span className="text-center">Change</span>
-                    <span className="text-right">Balance</span>
-                    <span className="text-right">Method</span>
+                    <span className="text-center">Balance</span>
+                    <span className="text-center">Method</span>
                   </div>
                   <div className="divide-y divide-slate-100">
                     {advanceLedger.map((a, i) => (
-                      <div key={a._id || i} className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_90px] items-center gap-4 px-4 py-3 text-sm hover:bg-slate-50/60 transition-colors">
+                      <div key={a._id || i} className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] items-center gap-4 px-4 py-3 text-sm hover:bg-slate-50/60 transition-colors">
                         <span className="text-slate-400">{i + 1}</span>
                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium justify-self-start whitespace-nowrap">{formatDate(a.date)}</span>
-                        <span className="text-right font-semibold tabular-nums text-slate-600">{formatCurrency(a.previousAdvance)}</span>
+                        <span className="text-center font-semibold tabular-nums text-slate-600">{formatCurrency(a.previousAdvance)}</span>
                         <span className={`flex items-center justify-center gap-1 font-semibold tabular-nums ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                           {formatCurrency(a.amount)}
                           {a.type === 'DEDUCTED' && <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">Deducted</span>}
                         </span>
-                        <span className="text-right font-bold tabular-nums text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
-                        <span className="justify-self-end">
+                        <span className="text-center font-bold tabular-nums text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
+                        <span className="justify-self-center">
                           {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
                         </span>
                       </div>
