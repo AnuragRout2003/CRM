@@ -48,19 +48,6 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleMarkAttendance = async (empId, dateStr, status) => {
-    try {
-      const res = await axios.put(`${API}/attendance/employee/${empId}/mark`, { date: dateStr, status });
-      setAttendanceMap((prev) => ({
-        ...prev,
-        [empId]: res.data,
-      }));
-      showToast(`Marked ${status}`);
-    } catch {
-      showToast('Failed to mark attendance', 'error');
-    }
-  };
-
   const handleUpdateWage = async (empId) => {
     const newWage = parseFloat(editingWage.value);
     if (isNaN(newWage) || newWage < 0) {
@@ -150,7 +137,7 @@ export default function Dashboard() {
     // Financials
     const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
     const advanceBalance = emp.totalAdvance || 0;
-    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) - advanceBalance);
+    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0));
     
     totalPendingSalary += remaining;
     totalPendingAdvances += advanceBalance;
@@ -345,7 +332,7 @@ export default function Dashboard() {
                   {filtered.map((emp) => {
                     const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
                     const advanceBalance = emp.totalAdvance || 0;
-                    const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) - advanceBalance);
+                    const remaining = Math.max(0, workingDays * (emp.dailyWage || 0));
                     const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                     return (
@@ -404,23 +391,16 @@ export default function Dashboard() {
                             {formatCurrency(remaining)}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              className={`cal-btn cal-present ${todayStatus === 'present' ? 'opacity-100 ring-2 ring-emerald-400' : 'opacity-50 hover:opacity-80'}`}
-                              title="Mark Present"
-                              onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'present')}
-                            >
-                              ✓
-                            </button>
-                            <button
-                              className={`cal-btn cal-absent ${todayStatus === 'absent' ? 'opacity-100 ring-2 ring-red-400' : 'opacity-50 hover:opacity-80'}`}
-                              title="Mark Absent"
-                              onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'absent')}
-                            >
-                              ✕
-                            </button>
-                          </div>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            todayStatus === 'present'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : todayStatus === 'absent'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {todayStatus || 'unmarked'}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -434,7 +414,7 @@ export default function Dashboard() {
               {filtered.map((emp) => {
                 const workingDays = getWorkingDaysAfter(emp._id, emp.paidTillDate) - (emp.partialPaidDays || 0);
                 const advanceBalance = emp.totalAdvance || 0;
-                const remaining = Math.max(0, (workingDays * (emp.dailyWage || 0)) - advanceBalance);
+                const remaining = Math.max(0, workingDays * (emp.dailyWage || 0));
                 const todayStatus = attendanceMap[emp._id]?.attendance?.[todayMonthKey]?.[todayDayStr];
 
                 return (
@@ -498,23 +478,18 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Attendance Buttons */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                    {/* Attendance Status */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                       <span className="text-xs text-slate-400 mr-auto">Today:</span>
-                      <button
-                        className={`cal-btn cal-present !w-8 !h-8 !text-xs ${todayStatus === 'present' ? 'opacity-100 ring-2 ring-emerald-400' : 'opacity-50 hover:opacity-80'}`}
-                        title="Mark Present"
-                        onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'present')}
-                      >
-                        ✓
-                      </button>
-                      <button
-                        className={`cal-btn cal-absent !w-8 !h-8 !text-xs ${todayStatus === 'absent' ? 'opacity-100 ring-2 ring-red-400' : 'opacity-50 hover:opacity-80'}`}
-                        title="Mark Absent"
-                        onClick={() => handleMarkAttendance(emp._id, todayDateStr, 'absent')}
-                      >
-                        ✕
-                      </button>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        todayStatus === 'present'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : todayStatus === 'absent'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {todayStatus || 'unmarked'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -526,3 +501,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

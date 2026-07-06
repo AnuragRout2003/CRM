@@ -114,21 +114,18 @@ export default function EmployeeDetail() {
     return Object.values(monthData).filter((s) => s === 'present').length;
   }, [attendance, monthKey]);
 
-  // Carried over unpaid wages
-  const carriedOverUnpaidWages = employee?.carriedOverUnpaidWages || 0;
-
   // Advance Balance (total from all time)
   const advanceBalance = useMemo(() => {
     if (!employee) return 0;
     return employee.totalAdvance || 0;
   }, [employee]);
 
-  // Remaining salary (Total available if 100% of advance is paid off)
+  // Remaining salary is earned wages still unpaid. Advances are tracked separately.
   const remainingSalary = useMemo(() => {
     if (!employee) return 0;
     const earnedThisCycle = unpaidPresentDays * (employee.dailyWage || 0);
-    return Math.max(0, earnedThisCycle - advanceBalance);
-  }, [unpaidPresentDays, advanceBalance, employee]);
+    return Math.max(0, earnedThisCycle);
+  }, [unpaidPresentDays, employee]);
 
   // Dynamic Payment Calculations
   const wagesEarnedThisCycle = unpaidPresentDays * (employee?.dailyWage || 0);
