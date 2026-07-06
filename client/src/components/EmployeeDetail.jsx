@@ -410,7 +410,7 @@ export default function EmployeeDetail() {
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Name</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Daily Wage</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Paid Till</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Unpaid Days ({MONTH_NAMES[month].slice(0, 3)})</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Present Days This Month ({MONTH_NAMES[month].slice(0, 3)})</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance Balance</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Remaining Salary</th>
               </tr>
@@ -450,7 +450,7 @@ export default function EmployeeDetail() {
             <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(employee.paidTillDate)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-slate-100">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Days Worked ({MONTH_NAMES[month].slice(0, 3)})</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Present Days This Month ({MONTH_NAMES[month].slice(0, 3)})</span>
             <span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-bold">{daysWorkedThisMonth} days</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-slate-100">
