@@ -201,7 +201,7 @@ router.post('/:id/payment', async (req, res) => {
 
     const deduction = Number(advanceDeducted) || 0;
     const paymentAmount = Number(amount) || 0;
-    const grossSettled = paymentAmount + deduction;
+    const grossSettled = paymentAmount;
 
     if (paymentAmount <= 0) {
       return res.status(400).json({ error: 'Payment amount must be greater than zero' });
@@ -218,8 +218,8 @@ router.post('/:id/payment', async (req, res) => {
       });
     }
 
-    const allocationResult = await allocateSalaryToPresentDays(employee, grossSettled);
-    const carriedForwardSalary = Math.max(0, beforePaymentSnapshot.remainingSalary - grossSettled);
+    const allocationResult = await allocateSalaryToPresentDays(employee, paymentAmount);
+    const carriedForwardSalary = Math.max(0, beforePaymentSnapshot.remainingSalary - paymentAmount);
 
     await SalaryPayment.create({
       employee: employee._id,

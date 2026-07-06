@@ -158,7 +158,7 @@ const rebuildPaidAmountsForEmployee = async (employee) => {
 
   let dayIndex = 0;
   for (const payment of payments) {
-    let amountLeft = payment.grossSettled ?? ((payment.amount || 0) + (payment.advanceDeducted || 0));
+    let amountLeft = payment.amount || 0;
     const allocations = [];
 
     while (amountLeft > 0 && dayIndex < presentDays.length) {
@@ -218,7 +218,7 @@ const getEmployeePayrollSnapshot = async (employee) => {
   const presentDays = attendanceDays.filter((day) => day.status === 'present');
   const totalEarned = presentDays.reduce((sum, day) => sum + (day.wageForThatDay || employee.dailyWage || 0), 0);
   const salarySettled = payments.reduce(
-    (sum, payment) => sum + (payment.grossSettled ?? ((payment.amount || 0) + (payment.advanceDeducted || 0))),
+    (sum, payment) => sum + (payment.amount || 0),
     0
   );
   const remainingSalary = Math.max(0, totalEarned - salarySettled);

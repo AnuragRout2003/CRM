@@ -142,11 +142,11 @@ export default function EmployeeDetail() {
     if (appliedDeduction < 0) appliedDeduction = 0;
   }
   
-  const currentNetPayable = Math.max(0, totalWagesOwed - appliedDeduction);
+  const currentNetPayable = totalWagesOwed;
   
   const paymentAmountInput = Number(payForm.amount) || 0;
   const paidDaysWorth = employee?.dailyWage > 0
-    ? (paymentAmountInput + appliedDeduction) / employee.dailyWage
+    ? paymentAmountInput / employee.dailyWage
     : 0;
   const newUnpaidWages = Math.max(0, currentNetPayable - paymentAmountInput);
 
@@ -640,7 +640,8 @@ export default function EmployeeDetail() {
                     <tr className="bg-slate-50 text-left">
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Paid</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance Deducted</th>
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Method</th>
                     </tr>
                   </thead>
@@ -653,6 +654,11 @@ export default function EmployeeDetail() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-semibold text-emerald-600">{formatCurrency(p.amount)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`font-semibold ${(p.advanceDeducted || 0) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                            {(p.advanceDeducted || 0) > 0 ? formatCurrency(p.advanceDeducted) : '-'}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           {p.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${p.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.method}</span>}
@@ -672,8 +678,14 @@ export default function EmployeeDetail() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-500">{formatDate(p.date)}</span>
-                      <span className="font-semibold text-emerald-600">{formatCurrency(p.amount)}</span>
+                      <span className="font-semibold text-emerald-600">Paid {formatCurrency(p.amount)}</span>
                     </div>
+                    {(p.advanceDeducted || 0) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500">Advance deducted</span>
+                        <span className="font-semibold text-amber-600">{formatCurrency(p.advanceDeducted)}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
