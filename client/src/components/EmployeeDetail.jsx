@@ -142,11 +142,11 @@ export default function EmployeeDetail() {
     if (appliedDeduction < 0) appliedDeduction = 0;
   }
   
-  const currentNetPayable = totalWagesOwed;
+  const currentNetPayable = Math.max(0, totalWagesOwed - appliedDeduction);
   
   const paymentAmountInput = Number(payForm.amount) || 0;
   const paidDaysWorth = employee?.dailyWage > 0
-    ? paymentAmountInput / employee.dailyWage
+    ? (paymentAmountInput + appliedDeduction) / employee.dailyWage
     : 0;
   const newUnpaidWages = Math.max(0, currentNetPayable - paymentAmountInput);
 
