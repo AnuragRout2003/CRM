@@ -43,45 +43,53 @@ const migrateLegacyAttendanceForEmployee = async (employeeId) => {
   const employee = await Employee.findById(employeeId);
   if (!employee) return;
 
-  const legacyRecord = await LegacyAttendance.findOne({ employee: employeeId });
-  if (!legacyRecord?.attendance) return;
+  const existingAttendanceCount = await AttendanceDay.countDocuments({ employee: employeeId });
 
-  const writes = [];
-  legacyRecord.attendance.forEach((days, monthKey) => {
-    readDayEntries(days).forEach(([day, status]) => {
-      if (!['present', 'absent'].includes(status)) return;
-      const dateKey = `${monthKey}-${String(day).padStart(2, '0')}`;
-      writes.push({
-        updateOne: {
-          filter: { employee: employee._id, dateKey },
-          update: {
-            $setOnInsert: {
-              employee: employee._id,
-              employeeName: employee.name,
-              date: dateFromKey(dateKey),
-              dateKey,
-              status,
-              wageForThatDay: employee.dailyWage || 0,
-              paidAmount: 0,
+  if (existingAttendanceCount === 0) {
+    const legacyRecord = await LegacyAttendance.findOne({ employee: employeeId });
+    if (legacyRecord?.attendance) {
+      const writes = [];
+      legacyRecord.attendance.forEach((days, monthKey) => {
+        readDayEntries(days).forEach(([day, status]) => {
+          if (!['present', 'absent'].includes(status)) return;
+          const dateKey = `${monthKey}-${String(day).padStart(2, '0')}`;
+          writes.push({
+            updateOne: {
+              filter: { employee: employee._id, dateKey },
+              update: {
+                $setOnInsert: {
+                  employee: employee._id,
+                  employeeName: employee.name,
+                  date: dateFromKey(dateKey),
+                  dateKey,
+                  status,
+                  wageForThatDay: employee.dailyWage || 0,
+                  paidAmount: 0,
+                },
+              },
+              upsert: true,
             },
-          },
-          upsert: true,
-        },
+          });
+        });
       });
-    });
-  });
 
-  if (writes.length) {
-    await AttendanceDay.bulkWrite(writes);
+      if (writes.length) {
+        await AttendanceDay.bulkWrite(writes);
+      }
+    }
   }
 
   if (employee.paidTillDate || employee.partialPaidDays) {
+    const hasPaidAttendance = await AttendanceDay.exists({ employee: employee._id, paidAmount: { $gt: 0 } });
+    if (hasPaidAttendance) return;
+
     const paidTillKey = employee.paidTillDate ? toDateKey(employee.paidTillDate) : null;
     const presentDays = await AttendanceDay.find({
       employee: employee._id,
       status: 'present',
     }).sort({ dateKey: 1 });
 
+    const writes = [];
     let partialDaysLeft = employee.partialPaidDays || 0;
     for (const day of presentDays) {
       const wage = day.wageForThatDay || employee.dailyWage || 0;
@@ -89,26 +97,42 @@ const migrateLegacyAttendanceForEmployee = async (employeeId) => {
 
       if (paidTillKey && day.dateKey <= paidTillKey) {
         if ((day.paidAmount || 0) < wage) {
-          day.paidAmount = wage;
-          await day.save();
+          writes.push({
+            updateOne: {
+              filter: { _id: day._id },
+              update: { $set: { paidAmount: wage } },
+            },
+          });
         }
         continue;
       }
 
       if (partialDaysLeft > 0 && (day.paidAmount || 0) <= 0) {
         const paidAmount = Math.min(wage, partialDaysLeft * wage);
-        day.paidAmount = paidAmount;
         partialDaysLeft -= paidAmount / wage;
-        await day.save();
+        writes.push({
+          updateOne: {
+            filter: { _id: day._id },
+            update: { $set: { paidAmount } },
+          },
+        });
       }
+    }
+
+    if (writes.length) {
+      await AttendanceDay.bulkWrite(writes);
     }
   }
 };
 
 const migrateLegacyTransactionsForEmployee = async (employee) => {
+  const hasLegacyPayments = Array.isArray(employee.payments) && employee.payments.length > 0;
+  const hasLegacyAdvances = Array.isArray(employee.advances) && employee.advances.length > 0;
+  if (!hasLegacyPayments && !hasLegacyAdvances) return;
+
   const [paymentCount, advanceCount] = await Promise.all([
-    SalaryPayment.countDocuments({ employee: employee._id }),
-    AdvanceTransaction.countDocuments({ employee: employee._id }),
+    hasLegacyPayments ? SalaryPayment.countDocuments({ employee: employee._id }) : Promise.resolve(1),
+    hasLegacyAdvances ? AdvanceTransaction.countDocuments({ employee: employee._id }) : Promise.resolve(1),
   ]);
 
   if (paymentCount === 0 && employee.payments?.length) {
@@ -161,14 +185,11 @@ const rebuildPaidAmountsForEmployee = async (employee) => {
   }).sort({ dateKey: 1 });
   const payments = await SalaryPayment.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 });
 
-  for (const day of presentDays) {
-    if ((day.paidAmount || 0) !== 0) {
-      day.paidAmount = 0;
-      await day.save();
-    }
-  }
-
   let dayIndex = 0;
+  const paidByDay = new Map(presentDays.map((day) => [String(day._id), 0]));
+  const attendanceWrites = [];
+  const paymentWrites = [];
+
   for (const payment of payments) {
     let amountLeft = payment.grossSettled ?? ((payment.amount || 0) + (payment.advanceDeducted || 0));
     const allocations = [];
@@ -176,7 +197,9 @@ const rebuildPaidAmountsForEmployee = async (employee) => {
     while (amountLeft > 0 && dayIndex < presentDays.length) {
       const day = presentDays[dayIndex];
       const wage = day.wageForThatDay || employee.dailyWage || 0;
-      const unpaidForDay = Math.max(0, wage - (day.paidAmount || 0));
+      const dayId = String(day._id);
+      const currentPaid = paidByDay.get(dayId) || 0;
+      const unpaidForDay = Math.max(0, wage - currentPaid);
 
       if (unpaidForDay <= 0) {
         dayIndex += 1;
@@ -184,8 +207,8 @@ const rebuildPaidAmountsForEmployee = async (employee) => {
       }
 
       const applied = Math.min(amountLeft, unpaidForDay);
-      day.paidAmount = (day.paidAmount || 0) + applied;
-      await day.save();
+      const newPaidAmount = currentPaid + applied;
+      paidByDay.set(dayId, newPaidAmount);
 
       allocations.push({
         attendanceDay: day._id,
@@ -194,14 +217,46 @@ const rebuildPaidAmountsForEmployee = async (employee) => {
       });
 
       amountLeft -= applied;
-      if (day.paidAmount >= wage) dayIndex += 1;
+      if (newPaidAmount >= wage) dayIndex += 1;
     }
 
-    if (JSON.stringify(payment.allocations || []) !== JSON.stringify(allocations)) {
-      payment.allocations = allocations;
-      await payment.save();
+    const existingAllocations = (payment.allocations || []).map((allocation) => ({
+      attendanceDay: String(allocation.attendanceDay),
+      dateKey: allocation.dateKey,
+      amount: allocation.amount,
+    }));
+    const nextAllocations = allocations.map((allocation) => ({
+      attendanceDay: String(allocation.attendanceDay),
+      dateKey: allocation.dateKey,
+      amount: allocation.amount,
+    }));
+
+    if (JSON.stringify(existingAllocations) !== JSON.stringify(nextAllocations)) {
+      paymentWrites.push({
+        updateOne: {
+          filter: { _id: payment._id },
+          update: { $set: { allocations } },
+        },
+      });
     }
   }
+
+  for (const day of presentDays) {
+    const nextPaidAmount = paidByDay.get(String(day._id)) || 0;
+    if ((day.paidAmount || 0) !== nextPaidAmount) {
+      attendanceWrites.push({
+        updateOne: {
+          filter: { _id: day._id },
+          update: { $set: { paidAmount: nextPaidAmount } },
+        },
+      });
+    }
+  }
+
+  await Promise.all([
+    attendanceWrites.length ? AttendanceDay.bulkWrite(attendanceWrites) : Promise.resolve(),
+    paymentWrites.length ? SalaryPayment.bulkWrite(paymentWrites) : Promise.resolve(),
+  ]);
 };
 
 const buildAttendanceRecordForEmployee = async (employee) => {
@@ -216,17 +271,44 @@ const buildAttendanceRecordForEmployee = async (employee) => {
 
 const getAllAttendanceRecords = async () => {
   await migrateAllLegacyAttendance();
-  const employees = await Employee.find().sort({ name: 1 });
-  return Promise.all(employees.map((employee) => buildAttendanceRecordForEmployee(employee)));
+  const [employees, days] = await Promise.all([
+    Employee.find().sort({ name: 1 }),
+    AttendanceDay.find({}).sort({ employee: 1, dateKey: 1 }),
+  ]);
+
+  const daysByEmployee = new Map();
+  days.forEach((day) => {
+    const employeeId = String(day.employee);
+    if (!daysByEmployee.has(employeeId)) daysByEmployee.set(employeeId, []);
+    daysByEmployee.get(employeeId).push(day);
+  });
+
+  return employees.map((employee) => {
+    const employeeDays = daysByEmployee.get(String(employee._id)) || [];
+    return {
+      employee: employee._id,
+      employeeName: employee.name,
+      attendance: buildAttendanceMap(employeeDays),
+      paidAttendance: buildPaidAttendanceMap(employeeDays),
+    };
+  });
 };
 
-const getEmployeePayrollSnapshot = async (employee) => {
-  await migrateLegacyTransactionsForEmployee(employee);
-  await getAttendanceDaysForEmployee(employee._id);
-  await rebuildPaidAmountsForEmployee(employee);
-  const attendanceDays = await AttendanceDay.find({ employee: employee._id }).sort({ dateKey: 1 });
-  const payments = await SalaryPayment.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 });
-  const advanceTransactions = await AdvanceTransaction.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 });
+const getEmployeePayrollSnapshot = async (employee, { rebuildPaidAmounts = false } = {}) => {
+  await Promise.all([
+    migrateLegacyTransactionsForEmployee(employee),
+    migrateLegacyAttendanceForEmployee(employee._id),
+  ]);
+
+  if (rebuildPaidAmounts) {
+    await rebuildPaidAmountsForEmployee(employee);
+  }
+
+  const [attendanceDays, payments, advanceTransactions] = await Promise.all([
+    AttendanceDay.find({ employee: employee._id }).sort({ dateKey: 1 }),
+    SalaryPayment.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 }),
+    AdvanceTransaction.find({ employee: employee._id }).sort({ date: 1, createdAt: 1 }),
+  ]);
 
   const presentDays = attendanceDays.filter((day) => day.status === 'present');
   const totalEarned = presentDays.reduce((sum, day) => sum + (day.wageForThatDay || employee.dailyWage || 0), 0);
@@ -268,8 +350,8 @@ const getEmployeePayrollSnapshot = async (employee) => {
   };
 };
 
-const buildEmployeePayload = async (employee) => {
-  const snapshot = await getEmployeePayrollSnapshot(employee);
+const buildEmployeePayload = async (employee, options = {}) => {
+  const snapshot = await getEmployeePayrollSnapshot(employee, options);
   const plainEmployee = employee.toObject({ virtuals: false });
   return {
     ...plainEmployee,
@@ -280,6 +362,16 @@ const buildEmployeePayload = async (employee) => {
     paidTillDate: snapshot.paidTillDate,
     partialPaidDays: snapshot.partialPaidDays,
     remainingSalary: snapshot.remainingSalary,
+  };
+};
+
+const buildEmployeeDetailPayload = async (employee, options = {}) => {
+  const employeePayload = await buildEmployeePayload(employee, options);
+  const attendanceRecord = await buildAttendanceRecordForEmployee(employee);
+
+  return {
+    employee: employeePayload,
+    attendance: attendanceRecord,
   };
 };
 
@@ -296,4 +388,5 @@ module.exports = {
   rebuildPaidAmountsForEmployee,
   getEmployeePayrollSnapshot,
   buildEmployeePayload,
+  buildEmployeeDetailPayload,
 };

@@ -9,6 +9,7 @@ const {
   SalaryPayment,
   AdvanceTransaction,
   buildEmployeePayload,
+  buildEmployeeDetailPayload,
   getEmployeePayrollSnapshot,
 } = require('../utils/payroll');
 
@@ -149,6 +150,7 @@ const parseDailyWage = (value) => {
 const allocateSalaryToPresentDays = async (employee, grossSettled) => {
   let amountLeft = grossSettled;
   const allocations = [];
+  const writes = [];
   let daysPaid = 0;
   let paidThroughDate = null;
 
@@ -166,8 +168,13 @@ const allocateSalaryToPresentDays = async (employee, grossSettled) => {
     if (unpaidForDay <= 0) continue;
 
     const applied = Math.min(amountLeft, unpaidForDay);
-    day.paidAmount = alreadyPaid + applied;
-    await day.save();
+    const nextPaidAmount = alreadyPaid + applied;
+    writes.push({
+      updateOne: {
+        filter: { _id: day._id },
+        update: { $set: { paidAmount: nextPaidAmount } },
+      },
+    });
 
     allocations.push({
       attendanceDay: day._id,
@@ -176,11 +183,15 @@ const allocateSalaryToPresentDays = async (employee, grossSettled) => {
     });
 
     daysPaid += wage > 0 ? applied / wage : 0;
-    if (day.paidAmount >= wage) {
+    if (nextPaidAmount >= wage) {
       paidThroughDate = day.date;
     }
 
     amountLeft -= applied;
+  }
+
+  if (writes.length) {
+    await AttendanceDay.bulkWrite(writes);
   }
 
   return {
@@ -248,7 +259,7 @@ router.post('/:id/payment', async (req, res) => {
       allocations: allocationResult.allocations,
     });
 
-    res.json(await buildEmployeePayload(employee));
+    res.json(await buildEmployeeDetailPayload(employee));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -271,7 +282,7 @@ router.post('/:id/advance', async (req, res) => {
       type: 'GIVEN',
     });
 
-    res.json(await buildEmployeePayload(employee));
+    res.json(await buildEmployeeDetailPayload(employee));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -302,7 +313,7 @@ router.put('/:id', upload.single('profilePicture'), async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
-    res.json(employee);
+    res.json(await buildEmployeeDetailPayload(employee, { rebuildPaidAmounts: true }));
   } catch (err) {
     if (err.code === 11000) {
       return res.status(400).json({ error: 'An employee with this name already exists' });

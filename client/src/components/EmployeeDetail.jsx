@@ -18,6 +18,7 @@ export default function EmployeeDetail() {
   const [attendance, setAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [savingAction, setSavingAction] = useState(null);
 
   // Calendar month
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -58,6 +59,20 @@ export default function EmployeeDetail() {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const applyDetailResponse = (data) => {
+    const nextEmployee = data?.employee || data;
+    if (!nextEmployee) return;
+
+    setEmployee(nextEmployee);
+    if (data?.attendance) {
+      setAttendance(data.attendance);
+    }
+    setEditForm({
+      name: nextEmployee.name,
+      dailyWage: nextEmployee.dailyWage || 0,
+    });
   };
 
   const formatCurrency = (val) => {
@@ -214,20 +229,23 @@ export default function EmployeeDetail() {
       return;
     }
     
+    setSavingAction('payment');
     try {
-      await axios.post(`${API}/employees/${id}/payment`, {
+      const res = await axios.post(`${API}/employees/${id}/payment`, {
         amount,
         date: payForm.date || undefined,
         advanceDeducted: appliedDeduction,
         wagesEarnedThisCycle: wagesEarnedThisCycle,
         method: payForm.method
       });
-      await fetchData();
+      applyDetailResponse(res.data);
       setPayForm({ amount: '', date: '', method: 'CASH' });
       setDeductedAdvanceInput(null);
       showToast('Payment recorded!');
-    } catch {
-      showToast('Failed to add payment', 'error');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to add payment', 'error');
+    } finally {
+      setSavingAction(null);
     }
   };
 
@@ -237,43 +255,51 @@ export default function EmployeeDetail() {
       showToast('Enter a valid amount', 'error');
       return;
     }
+    setSavingAction('advance');
     try {
-      await axios.post(`${API}/employees/${id}/advance`, {
+      const res = await axios.post(`${API}/employees/${id}/advance`, {
         amount: parseFloat(advForm.amount),
         date: advForm.date || undefined,
         method: advForm.method
       });
-      await fetchData();
+      applyDetailResponse(res.data);
       setAdvForm({ amount: '', date: '', method: 'CASH' });
       showToast('Advance recorded!');
-    } catch {
-      showToast('Failed to add advance', 'error');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to add advance', 'error');
+    } finally {
+      setSavingAction(null);
     }
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    setSavingAction('update');
     try {
-      await axios.put(`${API}/employees/${id}`, {
+      const res = await axios.put(`${API}/employees/${id}`, {
         name: editForm.name,
         dailyWage: Math.round(Number(editForm.dailyWage)) || 0,
       });
-      await fetchData();
+      applyDetailResponse(res.data);
       setEditModal(false);
       showToast('Updated!');
-    } catch {
-      showToast('Failed to update', 'error');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to update', 'error');
+    } finally {
+      setSavingAction(null);
     }
   };
 
   const handleDelete = async () => {
     if (!window.confirm(`Delete "${employee.name}"?`)) return;
+    setSavingAction('delete');
     try {
       await axios.delete(`${API}/employees/${id}`);
       showToast(`${employee.name} deleted`);
       setTimeout(() => navigate('/'), 800);
     } catch {
       showToast('Failed to delete', 'error');
+      setSavingAction(null);
     }
   };
 
@@ -303,6 +329,11 @@ export default function EmployeeDetail() {
   }
 
   // ── Render ───────────────────────────────────
+
+  const isSavingPayment = savingAction === 'payment';
+  const isSavingAdvance = savingAction === 'advance';
+  const isSavingUpdate = savingAction === 'update';
+  const isDeleting = savingAction === 'delete';
 
   if (loading) {
     return (
@@ -361,8 +392,8 @@ export default function EmployeeDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setEditModal(true)}>✏️ Edit</button>
-          <button className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-medium border border-red-200 hover:bg-red-100 transition-colors" onClick={handleDelete}>🗑️ Delete</button>
+          <button disabled={isDeleting} className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" onClick={() => setEditModal(true)}>✏️ Edit</button>
+          <button disabled={isDeleting} className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-medium border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" onClick={handleDelete}>{isDeleting ? 'Deleting...' : '🗑️ Delete'}</button>
         </div>
       </div>
 
@@ -473,7 +504,7 @@ export default function EmployeeDetail() {
                 <div className="bg-slate-50 p-4 rounded-lg mb-4 border border-slate-200 text-sm space-y-2">
                   
                   {/* Method Toggle */}
-                  <div className="flex rounded-full bg-slate-200/70 overflow-hidden cursor-pointer mb-3" onClick={() => setPayForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
+                  <div className={`flex rounded-full bg-slate-200/70 overflow-hidden mb-3 ${isSavingPayment ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`} onClick={() => !isSavingPayment && setPayForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
                     <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${payForm.method === 'CASH' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>CASH</div>
                     <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${payForm.method === 'UPI' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>UPI</div>
                   </div>
@@ -500,6 +531,7 @@ export default function EmployeeDetail() {
                         min="0" 
                         max={maxPossibleDeduction}
                         className="w-[90px] px-2 py-1 rounded-lg border border-slate-300 text-right text-red-600 font-bold text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                        disabled={isSavingPayment}
                         value={deductedAdvanceInput === null ? '' : deductedAdvanceInput} 
                         onChange={(e) => setDeductedAdvanceInput(e.target.value)} 
                       />
@@ -521,15 +553,15 @@ export default function EmployeeDetail() {
 
                 <div className="mb-4">
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="pay-amt">Payment Amount (₹)</label>
-                  <input id="pay-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm" placeholder="Enter amount" min="0"
+                  <input id="pay-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm disabled:bg-slate-50 disabled:text-slate-400" placeholder="Enter amount" min="0" disabled={isSavingPayment}
                     value={payForm.amount} onChange={(e) => setPayForm(p => ({ ...p, amount: e.target.value }))} />
                 </div>
                 <div className="mb-4">
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="pay-dt">Date</label>
-                  <input id="pay-dt" type="date" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
+                  <input id="pay-dt" type="date" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm disabled:bg-slate-50 disabled:text-slate-400" disabled={isSavingPayment}
                     value={payForm.date} onChange={(e) => setPayForm(p => ({ ...p, date: e.target.value }))} />
                 </div>
-                <button type="submit" className="w-full py-2.5 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all text-sm">Record Payment</button>
+                <button type="submit" disabled={isSavingPayment} className="w-full py-2.5 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all text-sm disabled:opacity-70 disabled:cursor-wait">{isSavingPayment ? 'Recording...' : 'Record Payment'}</button>
               </form>
             )}
           </div>
@@ -543,22 +575,22 @@ export default function EmployeeDetail() {
           <div className="p-4 md:p-6">
             <form onSubmit={handleAddAdvance}>
               {/* Method Toggle */}
-              <div className="flex rounded-full bg-slate-200/70 overflow-hidden cursor-pointer mb-4" onClick={() => setAdvForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
+              <div className={`flex rounded-full bg-slate-200/70 overflow-hidden mb-4 ${isSavingAdvance ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`} onClick={() => !isSavingAdvance && setAdvForm(p => ({ ...p, method: p.method === 'CASH' ? 'UPI' : 'CASH' }))}>
                 <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${advForm.method === 'CASH' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>CASH</div>
                 <div className={`flex-1 text-center py-2 text-xs font-bold transition-all ${advForm.method === 'UPI' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500'}`}>UPI</div>
               </div>
 
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="adv-amt">Amount (₹)</label>
-                <input id="adv-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm" placeholder="Enter amount" min="1"
+                <input id="adv-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm disabled:bg-slate-50 disabled:text-slate-400" placeholder="Enter amount" min="1" disabled={isSavingAdvance}
                   value={advForm.amount} onChange={(e) => setAdvForm(p => ({ ...p, amount: e.target.value }))} />
               </div>
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="adv-dt">Date</label>
-                <input id="adv-dt" type="date" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
+                <input id="adv-dt" type="date" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm disabled:bg-slate-50 disabled:text-slate-400" disabled={isSavingAdvance}
                   value={advForm.date} onChange={(e) => setAdvForm(p => ({ ...p, date: e.target.value }))} />
               </div>
-              <button type="submit" className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all text-sm">Record Advance</button>
+              <button type="submit" disabled={isSavingAdvance} className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all text-sm disabled:opacity-70 disabled:cursor-wait">{isSavingAdvance ? 'Recording...' : 'Record Advance'}</button>
             </form>
           </div>
         </div>
@@ -625,10 +657,15 @@ export default function EmployeeDetail() {
       </div>
 
       {/* ── Payment & Advance History ── */}
-      <div className="grid grid-cols-1 gap-4 md:gap-5 mb-6">
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
+          <h2 className="text-lg md:text-xl font-bold text-slate-900">Transaction History</h2>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payments and advances</span>
+        </div>
+      <div className="grid grid-cols-1 gap-5">
         {/* Payment History */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-emerald-100 bg-emerald-50/40 flex justify-between items-center">
             <h2 className="text-base md:text-lg font-semibold text-slate-800">Payment History</h2>
             <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">{employee.payments?.length || 0}</span>
           </div>
@@ -636,14 +673,14 @@ export default function EmployeeDetail() {
             <>
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[760px] text-sm">
                   <thead>
                     <tr className="bg-slate-50 text-left">
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
+                      <th className="w-12 px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Paid</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Advance Deducted</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Method</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider text-right">Paid</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider text-right">Advance Deducted</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider text-right">Method</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -653,15 +690,15 @@ export default function EmployeeDetail() {
                         <td className="px-4 py-3">
                           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(p.date)}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className="font-semibold text-emerald-600">{formatCurrency(p.amount)}</span>
+                        <td className="px-4 py-3 text-right">
+                          <span className="font-semibold tabular-nums text-emerald-600">{formatCurrency(p.amount)}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`font-semibold ${(p.advanceDeducted || 0) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`font-semibold tabular-nums ${(p.advanceDeducted || 0) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
                             {(p.advanceDeducted || 0) > 0 ? formatCurrency(p.advanceDeducted) : '-'}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           {p.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${p.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.method}</span>}
                         </td>
                       </tr>
@@ -700,7 +737,7 @@ export default function EmployeeDetail() {
 
         {/* Advance History */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center">
+          <div className="px-4 py-3 md:px-6 md:py-4 border-b border-amber-100 bg-amber-50/50 flex justify-between items-center">
             <h2 className="text-base md:text-lg font-semibold text-slate-800">Advance History</h2>
             <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-bold">{employee.advances?.length || 0}</span>
           </div>
@@ -708,8 +745,8 @@ export default function EmployeeDetail() {
             <>
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-                <div className="min-w-[640px]">
-                  <div className="grid grid-cols-[36px_minmax(96px,1fr)_minmax(96px,1fr)_minmax(112px,1fr)_minmax(112px,1fr)_70px] items-center gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                <div className="min-w-[860px]">
+                  <div className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_90px] items-center gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
                     <span>#</span>
                     <span>Date</span>
                     <span className="text-right">Previous</span>
@@ -719,7 +756,7 @@ export default function EmployeeDetail() {
                   </div>
                   <div className="divide-y divide-slate-100">
                     {advanceLedger.map((a, i) => (
-                      <div key={a._id || i} className="grid grid-cols-[36px_minmax(96px,1fr)_minmax(96px,1fr)_minmax(112px,1fr)_minmax(112px,1fr)_70px] items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50/60 transition-colors">
+                      <div key={a._id || i} className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_90px] items-center gap-4 px-4 py-3 text-sm hover:bg-slate-50/60 transition-colors">
                         <span className="text-slate-400">{i + 1}</span>
                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium justify-self-start whitespace-nowrap">{formatDate(a.date)}</span>
                         <span className="text-right font-semibold tabular-nums text-slate-600">{formatCurrency(a.previousAdvance)}</span>
@@ -773,31 +810,32 @@ export default function EmployeeDetail() {
           )}
         </div>
       </div>
+      </div>
 
       {/* ── Edit Modal ── */}
       {editModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditModal(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !isSavingUpdate && setEditModal(false)}>
           <div className="bg-white rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
               <h3 className="text-lg font-bold text-slate-900">Edit Employee</h3>
-              <button className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors text-sm font-bold" onClick={() => setEditModal(false)}>✕</button>
+              <button disabled={isSavingUpdate} className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed" onClick={() => setEditModal(false)}>✕</button>
             </div>
             <form onSubmit={handleUpdate}>
               <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="edit-name">Name</label>
-                  <input id="edit-name" type="text" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
+                  <input id="edit-name" type="text" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm disabled:bg-slate-50 disabled:text-slate-400" disabled={isSavingUpdate}
                     value={editForm.name} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="edit-wage">Daily Wage (₹)</label>
-                  <input id="edit-wage" type="number" step="1" min="1" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm"
+                  <input id="edit-wage" type="number" step="1" min="1" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm disabled:bg-slate-50 disabled:text-slate-400" disabled={isSavingUpdate}
                     value={editForm.dailyWage} onChange={(e) => setEditForm(p => ({ ...p, dailyWage: e.target.value }))} onWheel={(e) => e.currentTarget.blur()} />
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button type="button" className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors" onClick={() => setEditModal(false)}>Cancel</button>
-                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white text-sm font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all">Save Changes</button>
+                <button type="button" disabled={isSavingUpdate} className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" onClick={() => setEditModal(false)}>Cancel</button>
+                <button type="submit" disabled={isSavingUpdate} className="px-5 py-2 rounded-lg bg-gradient-to-r from-sky-600 to-violet-600 text-white text-sm font-semibold shadow-md hover:shadow-lg hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-wait">{isSavingUpdate ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
           </div>

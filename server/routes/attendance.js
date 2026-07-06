@@ -8,6 +8,7 @@ const {
   buildAttendanceRecordForEmployee,
   getAllAttendanceRecords,
   getAttendanceDaysForEmployee,
+  rebuildPaidAmountsForEmployee,
 } = require('../utils/payroll');
 
 const isDateMarkable = (dateKey) => {
@@ -88,6 +89,7 @@ router.put('/employee/:employeeId/mark', async (req, res) => {
       );
     }
 
+    await rebuildPaidAmountsForEmployee(employee);
     const record = await buildAttendanceRecordForEmployee(employee);
     res.json(record);
   } catch (err) {

@@ -20,21 +20,16 @@ export default function Dashboard() {
 
   const fetchAll = async () => {
     try {
-      const empRes = await axios.get(`${API}/employees`);
+      const [empRes, attRes] = await Promise.all([
+        axios.get(`${API}/employees`),
+        axios.get(`${API}/attendance`),
+      ]);
       setEmployees(empRes.data);
 
-      // Fetch attendance for all employees
       const attMap = {};
-      await Promise.all(
-        empRes.data.map(async (emp) => {
-          try {
-            const attRes = await axios.get(`${API}/attendance/employee/${emp._id}`);
-            attMap[emp._id] = attRes.data;
-          } catch {
-            attMap[emp._id] = null;
-          }
-        })
-      );
+      attRes.data.forEach((record) => {
+        attMap[record.employee] = record;
+      });
       setAttendanceMap(attMap);
     } catch {
       showToast('Failed to load data', 'error');
