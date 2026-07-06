@@ -97,6 +97,13 @@ export default function EmployeeDetail() {
     });
   };
 
+  const formatDays = (value) => {
+    const num = Number(value) || 0;
+    return new Intl.NumberFormat('en-IN', {
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
   // ── Computed values ──────────────────────────
 
   const paidTillDateStr = useMemo(() => {
@@ -472,7 +479,7 @@ export default function EmployeeDetail() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Unpaid Present Days</div>
-          <div className="text-xl md:text-2xl font-bold text-emerald-600">{unpaidPresentDays}</div>
+          <div className="text-xl md:text-2xl font-bold text-emerald-600">{formatDays(unpaidPresentDays)}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Advance Balance</div>
