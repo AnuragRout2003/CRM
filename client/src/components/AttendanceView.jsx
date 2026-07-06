@@ -9,6 +9,7 @@ export default function AttendanceView() {
   const [attendanceMap, setAttendanceMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [search, setSearch] = useState('');
 
   // currentBaseDate tracks which week we are viewing.
   const [currentBaseDate, setCurrentBaseDate] = useState(() => {
@@ -34,6 +35,13 @@ export default function AttendanceView() {
     }
     return dates;
   }, [currentBaseDate]);
+
+  const filteredEmployees = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return employees
+      .filter((employee) => employee.name.toLowerCase().includes(query))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [employees, search]);
 
   useEffect(() => {
     fetchData();
@@ -223,26 +231,36 @@ export default function AttendanceView() {
           </p>
         </div>
 
-        {/* Week navigation */}
-        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm self-start md:self-auto">
-          <button
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all"
-            onClick={prevWeek}
-          >
-            ◀ Prev
-          </button>
-          <button
-            className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-50 rounded-lg border border-sky-200 hover:bg-sky-100 hover:border-sky-300 transition-all"
-            onClick={goToToday}
-          >
-            Today
-          </button>
-          <button
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all"
-            onClick={nextWeek}
-          >
-            Next ▶
-          </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search employee"
+            className="w-full sm:w-[220px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+          />
+
+          {/* Week navigation */}
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm self-start md:self-auto">
+            <button
+              className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all"
+              onClick={prevWeek}
+            >
+              ◀ Prev
+            </button>
+            <button
+              className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-50 rounded-lg border border-sky-200 hover:bg-sky-100 hover:border-sky-300 transition-all"
+              onClick={goToToday}
+            >
+              Today
+            </button>
+            <button
+              className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all"
+              onClick={nextWeek}
+            >
+              Next ▶
+            </button>
+          </div>
         </div>
       </div>
 
@@ -250,9 +268,12 @@ export default function AttendanceView() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Card Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 md:px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-          <h2 className="text-sm md:text-base font-bold text-slate-800">
-            Week of {formatDateLabel(weekDates[0])} — {formatDateLabel(weekDates[6])}
-          </h2>
+          <div>
+            <h2 className="text-sm md:text-base font-bold text-slate-800">
+              Week of {formatDateLabel(weekDates[0])} — {formatDateLabel(weekDates[6])}
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-400">{filteredEmployees.length} of {employees.length} employees shown</p>
+          </div>
           {/* Legend */}
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5">
@@ -296,14 +317,14 @@ export default function AttendanceView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {employees.length === 0 ? (
+              {filteredEmployees.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12">
-                    <p className="text-slate-400 text-sm">No employees found. Add an employee to get started.</p>
+                    <p className="text-slate-400 text-sm">{search ? 'No employees match your search.' : 'No employees found. Add an employee to get started.'}</p>
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
+                filteredEmployees.map((emp) => (
                   <tr key={emp._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="sticky left-0 z-[9] bg-white border-r-2 border-slate-200 px-4 py-3 font-semibold text-sm text-slate-800">
                       <div className="flex items-center gap-2.5">
@@ -374,13 +395,13 @@ export default function AttendanceView() {
 
         {/* ── MOBILE CARD VIEW (visible only on mobile) ── */}
         <div className="md:hidden">
-          {employees.length === 0 ? (
+          {filteredEmployees.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-slate-400 text-sm">No employees found. Add an employee to get started.</p>
+              <p className="text-slate-400 text-sm">{search ? 'No employees match your search.' : 'No employees found. Add an employee to get started.'}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {employees.map((emp) => (
+              {filteredEmployees.map((emp) => (
                 <div key={emp._id} className="px-4 py-4">
                   {/* Employee name + avatar */}
                   <div className="flex items-center gap-2.5 mb-3">
