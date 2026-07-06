@@ -707,46 +707,38 @@ export default function EmployeeDetail() {
             <>
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-left">
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Previous Advance</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Added / Deducted</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Carry Forward</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Method</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <div className="min-w-[640px]">
+                  <div className="grid grid-cols-[36px_minmax(96px,1fr)_minmax(96px,1fr)_minmax(112px,1fr)_minmax(112px,1fr)_70px] items-center gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    <span>#</span>
+                    <span>Date</span>
+                    <span className="text-right">Previous</span>
+                    <span className="text-right">Change</span>
+                    <span className="text-right">Balance</span>
+                    <span className="text-right">Method</span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
                     {advanceLedger.map((a, i) => (
-                      <tr key={a._id || i} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
-                        <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(a.date)}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-semibold text-slate-600">{formatCurrency(a.previousAdvance)}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</span>
-                          {a.type === 'DEDUCTED' && <span className="ml-2 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">Deducted</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-bold text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
-                        </td>
-                        <td className="px-4 py-3">
+                      <div key={a._id || i} className="grid grid-cols-[36px_minmax(96px,1fr)_minmax(96px,1fr)_minmax(112px,1fr)_minmax(112px,1fr)_70px] items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50/60 transition-colors">
+                        <span className="text-slate-400">{i + 1}</span>
+                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium justify-self-start whitespace-nowrap">{formatDate(a.date)}</span>
+                        <span className="text-right font-semibold tabular-nums text-slate-600">{formatCurrency(a.previousAdvance)}</span>
+                        <span className={`text-right font-semibold tabular-nums ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {formatCurrency(a.amount)}
+                          {a.type === 'DEDUCTED' && <span className="ml-1 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase align-middle">Deducted</span>}
+                        </span>
+                        <span className="text-right font-bold tabular-nums text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
+                        <span className="justify-self-end">
                           {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
-                        </td>
-                      </tr>
+                        </span>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
               {/* Mobile Cards */}
               <div className="md:hidden divide-y divide-slate-100">
                 {advanceLedger.map((a, i) => (
-                  <div key={a._id || i} className="p-4 space-y-1.5">
+                  <div key={a._id || i} className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400 font-medium">#{i + 1}</span>
                       {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
@@ -755,12 +747,19 @@ export default function EmployeeDetail() {
                       <span className="text-xs text-slate-500">{formatDate(a.date)} {a.type === 'DEDUCTED' && '(Deducted)'}</span>
                       <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</span>
                     </div>
-                    <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-600">
-                      <span className="font-semibold">{formatCurrency(a.previousAdvance)}</span>
-                      <span className="mx-1">{a.amount < 0 ? '-' : '+'}</span>
-                      <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(Math.abs(a.amount))}</span>
-                      <span className="mx-1">=</span>
-                      <span className="font-bold text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 border border-slate-100 p-2 text-xs">
+                      <div className="min-w-0 rounded-md bg-white px-2 py-2 border border-slate-100">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Previous</div>
+                        <div className="mt-1 font-semibold tabular-nums text-slate-600 truncate">{formatCurrency(a.previousAdvance)}</div>
+                      </div>
+                      <div className="min-w-0 rounded-md bg-white px-2 py-2 border border-slate-100">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Change</div>
+                        <div className={`mt-1 font-semibold tabular-nums truncate ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</div>
+                      </div>
+                      <div className="min-w-0 rounded-md bg-white px-2 py-2 border border-slate-100">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Balance</div>
+                        <div className="mt-1 font-bold tabular-nums text-amber-700 truncate">{formatCurrency(a.carryForwardAdvance)}</div>
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -64,10 +64,14 @@ router.put('/employee/:employeeId/mark', async (req, res) => {
     const employee = await Employee.findById(req.params.employeeId);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
+    const existing = await AttendanceDay.findOne({ employee: employee._id, dateKey });
+    if ((existing?.paidAmount || 0) > 0) {
+      return res.status(400).json({ error: 'Cannot modify attendance for a paid date.' });
+    }
+
     if (status === 'unmarked') {
       await AttendanceDay.deleteOne({ employee: employee._id, dateKey });
     } else {
-      const existing = await AttendanceDay.findOne({ employee: employee._id, dateKey });
       const paidAmount = status === 'present' ? existing?.paidAmount || 0 : 0;
       await AttendanceDay.findOneAndUpdate(
         { employee: employee._id, dateKey },

@@ -181,9 +181,9 @@ export default function AttendanceView() {
     const cellDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
-    const isLocked = cellDate < sevenDaysAgo || cellDate > today;
     const isToday = today.getTime() === cellDate.getTime();
     const isPaid = status === 'present' && paidTillDateStr && fullDateStr <= paidTillDateStr;
+    const isLocked = cellDate < sevenDaysAgo || cellDate > today || isPaid;
     return { status, isLocked, isToday, isPaid };
   };
 
