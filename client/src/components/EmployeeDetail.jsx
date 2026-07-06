@@ -177,6 +177,28 @@ export default function EmployeeDetail() {
     );
   }, [employee]);
 
+  const advanceLedger = useMemo(() => {
+    if (!employee?.advances) return [];
+
+    let runningBalance = 0;
+    return [...employee.advances]
+      .map((advance, originalIndex) => ({ ...advance, originalIndex }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date) || a.originalIndex - b.originalIndex)
+      .map((advance) => {
+        const amount = Number(advance.amount) || 0;
+        const previousAdvance = runningBalance;
+        const carryForwardAdvance = previousAdvance + amount;
+        runningBalance = carryForwardAdvance;
+
+        return {
+          ...advance,
+          previousAdvance,
+          carryForwardAdvance,
+        };
+      })
+      .reverse();
+  }, [employee]);
+
   // ── Handlers ─────────────────────────────────
 
   const handleMarkAttendance = async (day, status) => {
@@ -702,20 +724,28 @@ export default function EmployeeDetail() {
                     <tr className="bg-slate-50 text-left">
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">#</th>
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Previous Advance</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Added / Deducted</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Carry Forward</th>
                       <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Method</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...employee.advances].sort((a, b) => new Date(b.date) - new Date(a.date)).map((a, i) => (
+                    {advanceLedger.map((a, i) => (
                       <tr key={a._id || i} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-3 text-slate-400">{i + 1}</td>
                         <td className="px-4 py-3">
                           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{formatDate(a.date)}</span>
                         </td>
                         <td className="px-4 py-3">
+                          <span className="font-semibold text-slate-600">{formatCurrency(a.previousAdvance)}</span>
+                        </td>
+                        <td className="px-4 py-3">
                           <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</span>
                           {a.type === 'DEDUCTED' && <span className="ml-2 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">Deducted</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-bold text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
                         </td>
                         <td className="px-4 py-3">
                           {a.method && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${a.method === 'UPI' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.method}</span>}
@@ -727,7 +757,7 @@ export default function EmployeeDetail() {
               </div>
               {/* Mobile Cards */}
               <div className="md:hidden divide-y divide-slate-100">
-                {[...employee.advances].sort((a, b) => new Date(b.date) - new Date(a.date)).map((a, i) => (
+                {advanceLedger.map((a, i) => (
                   <div key={a._id || i} className="p-4 space-y-1.5">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400 font-medium">#{i + 1}</span>
@@ -736,6 +766,13 @@ export default function EmployeeDetail() {
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-500">{formatDate(a.date)} {a.type === 'DEDUCTED' && '(Deducted)'}</span>
                       <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(a.amount)}</span>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-600">
+                      <span className="font-semibold">{formatCurrency(a.previousAdvance)}</span>
+                      <span className="mx-1">{a.amount < 0 ? '-' : '+'}</span>
+                      <span className={`font-semibold ${a.amount < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{formatCurrency(Math.abs(a.amount))}</span>
+                      <span className="mx-1">=</span>
+                      <span className="font-bold text-amber-700">{formatCurrency(a.carryForwardAdvance)}</span>
                     </div>
                   </div>
                 ))}
