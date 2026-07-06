@@ -201,13 +201,27 @@ router.post('/:id/payment', async (req, res) => {
 
     const deduction = Number(advanceDeducted) || 0;
     const paymentAmount = Number(amount) || 0;
-    const grossSettled = paymentAmount + deduction;
+    const requestedSettled = paymentAmount + deduction;
 
-    if (paymentAmount <= 0) {
-      return res.status(400).json({ error: 'Payment amount must be greater than zero' });
+    if (paymentAmount < 0 || deduction < 0) {
+      return res.status(400).json({ error: 'Payment and deduction amounts cannot be negative' });
+    }
+
+    if (requestedSettled <= 0) {
+      return res.status(400).json({ error: 'Enter a payment amount or advance deduction' });
     }
 
     const beforePaymentSnapshot = await getEmployeePayrollSnapshot(employee);
+    if (deduction > beforePaymentSnapshot.totalAdvance) {
+      return res.status(400).json({ error: 'Advance deduction cannot exceed advance balance' });
+    }
+
+    const maxCashPayment = Math.max(0, beforePaymentSnapshot.remainingSalary - Math.min(beforePaymentSnapshot.remainingSalary, deduction));
+    if (paymentAmount > maxCashPayment) {
+      return res.status(400).json({ error: 'Payment amount cannot exceed remaining salary after advance deduction' });
+    }
+
+    const grossSettled = Math.min(beforePaymentSnapshot.remainingSalary, requestedSettled);
     if (deduction > 0) {
       await AdvanceTransaction.create({
         employee: employee._id,

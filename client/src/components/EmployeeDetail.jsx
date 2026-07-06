@@ -129,7 +129,7 @@ export default function EmployeeDetail() {
   // Dynamic Payment Calculations
   const wagesEarnedThisCycle = remainingSalary;
   const totalWagesOwed = wagesEarnedThisCycle;
-  const maxPossibleDeduction = Math.min(advanceBalance, totalWagesOwed);
+  const maxPossibleDeduction = advanceBalance;
   
   let appliedDeduction;
   if (deductedAdvanceInput === null) {
@@ -145,10 +145,11 @@ export default function EmployeeDetail() {
   const currentNetPayable = Math.max(0, totalWagesOwed - appliedDeduction);
   
   const paymentAmountInput = Number(payForm.amount) || 0;
+  const salarySettledThisEntry = Math.min(totalWagesOwed, paymentAmountInput + appliedDeduction);
   const paidDaysWorth = employee?.dailyWage > 0
-    ? (paymentAmountInput + appliedDeduction) / employee.dailyWage
+    ? salarySettledThisEntry / employee.dailyWage
     : 0;
-  const newUnpaidWages = Math.max(0, currentNetPayable - paymentAmountInput);
+  const newUnpaidWages = Math.max(0, totalWagesOwed - salarySettledThisEntry);
 
   // Set of payment date strings for calendar markers (format: "YYYY-MM-DD")
   const paymentDates = useMemo(() => {
@@ -198,15 +199,14 @@ export default function EmployeeDetail() {
 
   const handleAddPayment = async (e) => {
     e.preventDefault();
-    const amount = parseFloat(payForm.amount);
-    if (!amount || amount <= 0) {
+    const amount = parseFloat(payForm.amount || '0');
+    if (amount < 0 || appliedDeduction < 0) {
       showToast('Enter a valid amount', 'error');
       return;
     }
     
-    // We validate against total net payable
-    if (totalWagesOwed <= 0 && remainingSalary <= 0) {
-      showToast('Cannot make a payment when remaining salary is zero', 'error');
+    if (amount <= 0 && appliedDeduction <= 0) {
+      showToast('Enter payment amount or advance deduction', 'error');
       return;
     }
     if (amount > currentNetPayable) {
@@ -216,7 +216,7 @@ export default function EmployeeDetail() {
     
     try {
       await axios.post(`${API}/employees/${id}/payment`, {
-        amount: parseFloat(payForm.amount),
+        amount,
         date: payForm.date || undefined,
         advanceDeducted: appliedDeduction,
         wagesEarnedThisCycle: wagesEarnedThisCycle,
@@ -463,7 +463,7 @@ export default function EmployeeDetail() {
             <h2 className="text-base md:text-lg font-semibold text-slate-800">💰 Record Payment</h2>
           </div>
           <div className="p-4 md:p-6">
-            {remainingSalary <= 0 ? (
+            {remainingSalary <= 0 && advanceBalance <= 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <p className="text-amber-600 font-semibold mb-2">Payment Not Allowed</p>
                 <p className="text-sm text-slate-500">Remaining salary is settled or negative. Any extra money given must be recorded as an <b>Advance</b>.</p>
@@ -521,7 +521,7 @@ export default function EmployeeDetail() {
 
                 <div className="mb-4">
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5" htmlFor="pay-amt">Payment Amount (₹)</label>
-                  <input id="pay-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm" placeholder="Enter amount" min="1"
+                  <input id="pay-amt" type="number" className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all text-sm" placeholder="Enter amount" min="0"
                     value={payForm.amount} onChange={(e) => setPayForm(p => ({ ...p, amount: e.target.value }))} />
                 </div>
                 <div className="mb-4">
@@ -625,7 +625,7 @@ export default function EmployeeDetail() {
       </div>
 
       {/* ── Payment & Advance History ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-6">
+      <div className="grid grid-cols-1 gap-4 md:gap-5 mb-6">
         {/* Payment History */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center">
