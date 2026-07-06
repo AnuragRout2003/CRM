@@ -5,6 +5,18 @@ const paymentSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  daysPaid: {
+    type: Number,
+    default: 0,
+  },
+  paidThroughDate: {
+    type: Date,
+    default: null,
+  },
+  carriedForwardSalary: {
+    type: Number,
+    default: 0,
+  },
   date: {
     type: Date,
     required: true,

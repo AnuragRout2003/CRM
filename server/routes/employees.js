@@ -134,10 +134,31 @@ const parseDateWithTime = (dateStr) => {
   return d;
 };
 
+const toDateOnlyString = (date) => {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const getPresentDates = (attendanceDoc) => {
+  if (!attendanceDoc?.attendance) return [];
+
+  const presentDates = [];
+  attendanceDoc.attendance.forEach((days, month) => {
+    const dayEntries = days instanceof Map ? days.entries() : Object.entries(days || {});
+    for (const [day, status] of dayEntries) {
+      if (status === 'present') {
+        presentDates.push(`${month}-${String(day).padStart(2, '0')}`);
+      }
+    }
+  });
+
+  return presentDates.sort();
+};
+
 // POST add salary payment to employee
 router.post('/:id/payment', async (req, res) => {
   try {
-    const { amount, date, advanceDeducted, method = 'CASH', wagesEarnedThisCycle = 0 } = req.body;
+    const { amount, date, advanceDeducted, method = 'CASH' } = req.body;
     const paymentDate = parseDateWithTime(date);
 
     const employee = await Employee.findById(req.params.id);
@@ -155,31 +176,21 @@ router.post('/:id/payment', async (req, res) => {
 
     const paymentAmount = Number(amount) || 0;
     const dailyWage = employee.dailyWage || 0;
-    const totalPaidAmount = paymentAmount + deduction;
+    const totalPaidAmount = paymentAmount;
+    let daysPaid = 0;
+    let carriedForwardSalary = 0;
 
     if (dailyWage > 0 && totalPaidAmount > 0) {
-      const daysPaid = totalPaidAmount / dailyWage;
+      daysPaid = totalPaidAmount / dailyWage;
       let totalDaysToMove = daysPaid + (employee.partialPaidDays || 0);
 
       const attendanceDoc = await Attendance.findOne({ employee: employee._id });
-      if (attendanceDoc && attendanceDoc.attendance) {
-        const presentDates = [];
-        Object.entries(attendanceDoc.attendance).forEach(([month, days]) => {
-          if (days && typeof days === 'object') {
-            Object.entries(days).forEach(([day, status]) => {
-              if (status === 'present') {
-                presentDates.push(`${month}-${String(day).padStart(2, '0')}`);
-              }
-            });
-          }
-        });
-        
-        presentDates.sort();
+      const presentDates = getPresentDates(attendanceDoc);
 
+      if (presentDates.length) {
         let paidTillStr = null;
         if (employee.paidTillDate) {
-          const pt = new Date(employee.paidTillDate);
-          paidTillStr = `${pt.getFullYear()}-${String(pt.getMonth() + 1).padStart(2, '0')}-${String(pt.getDate()).padStart(2, '0')}`;
+          paidTillStr = toDateOnlyString(employee.paidTillDate);
         }
 
         for (const dateStr of presentDates) {
@@ -193,11 +204,26 @@ router.post('/:id/payment', async (req, res) => {
           }
         }
       }
-      
+
       employee.partialPaidDays = totalDaysToMove;
     }
-    
-    employee.payments.push({ amount: paymentAmount, date: paymentDate, method });
+
+    const attendanceDoc = await Attendance.findOne({ employee: employee._id });
+    const paidTillStr = employee.paidTillDate ? toDateOnlyString(employee.paidTillDate) : null;
+    const unpaidPresentDays = Math.max(
+      0,
+      getPresentDates(attendanceDoc).filter((dateStr) => !paidTillStr || dateStr > paidTillStr).length - (employee.partialPaidDays || 0)
+    );
+    carriedForwardSalary = unpaidPresentDays * dailyWage;
+
+    employee.payments.push({
+      amount: paymentAmount,
+      daysPaid,
+      paidThroughDate: employee.paidTillDate || null,
+      carriedForwardSalary,
+      date: paymentDate,
+      method
+    });
 
     await employee.save();
     res.json(employee);

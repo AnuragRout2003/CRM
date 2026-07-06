@@ -18,7 +18,6 @@ export default function EmployeeDetail() {
   const [attendance, setAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  const [marking, setMarking] = useState(false);
 
   // Calendar month
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -201,22 +200,6 @@ export default function EmployeeDetail() {
 
   // ── Handlers ─────────────────────────────────
 
-  const handleMarkAttendance = async (day, status) => {
-    if (marking) return;
-    const dayStr = String(day).padStart(2, '0');
-    const dateStr = `${monthKey}-${dayStr}`;
-    setMarking(true);
-    try {
-      await axios.put(`${API}/attendance/employee/${id}/mark`, { date: dateStr, status });
-      await fetchData();
-      showToast(`Marked ${status} for ${dateStr}`);
-    } catch {
-      showToast('Failed to mark', 'error');
-    } finally {
-      setMarking(false);
-    }
-  };
-
   const handleAddPayment = async (e) => {
     e.preventDefault();
     const amount = parseFloat(payForm.amount);
@@ -316,15 +299,10 @@ export default function EmployeeDetail() {
     const isToday = isCurrentMonth && today.getDate() === d;
     const dateKey = `${monthKey}-${dayStr}`;
 
-    const cellDate = new Date(`${dateKey}T00:00:00`);
-    const sevenDaysAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
-    const sevenDaysFuture = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
-    const isLocked = cellDate < sevenDaysAgo || cellDate > sevenDaysFuture;
-
     const hasPayment = paymentDates.has(dateKey);
     const hasAdvance = advanceDates.has(dateKey);
     const isPaid = status === 'present' && paidTillDateStr && dateKey <= paidTillDateStr;
-    calendarCells.push({ day: d, dayStr, status, isToday, hasPayment, hasAdvance, isLocked, isPaid, key: `d-${d}` });
+    calendarCells.push({ day: d, dayStr, status, isToday, hasPayment, hasAdvance, isPaid, key: `d-${d}` });
   }
 
   // ── Render ───────────────────────────────────
@@ -618,7 +596,8 @@ export default function EmployeeDetail() {
               if (cell.day === null) return <div key={cell.key} className="calendar-cell empty" />;
 
               let statusClass = 'unmarked';
-              if (cell.status === 'present') statusClass = 'present';
+              if (cell.isPaid) statusClass = 'paid';
+              else if (cell.status === 'present') statusClass = 'present';
               else if (cell.status === 'absent') statusClass = 'absent';
 
               return (
@@ -632,13 +611,14 @@ export default function EmployeeDetail() {
                     {cell.isPaid && <span className="text-[10px]" title="Paid">✅</span>}
                   </div>
 
-                  <div className="flex gap-1 mt-auto">
-                    <button className="cal-btn cal-present" title="Present" disabled={marking || cell.isLocked}
-                      style={{ cursor: cell.isLocked ? 'not-allowed' : 'pointer', opacity: cell.isLocked ? 0.3 : 1 }}
-                      onClick={() => !cell.isLocked && handleMarkAttendance(cell.day, 'present')}>✓</button>
-                    <button className="cal-btn cal-absent" title="Absent" disabled={marking || cell.isLocked}
-                      style={{ cursor: cell.isLocked ? 'not-allowed' : 'pointer', opacity: cell.isLocked ? 0.3 : 1 }}
-                      onClick={() => !cell.isLocked && handleMarkAttendance(cell.day, 'absent')}>✕</button>
+                  <div className="mt-auto text-[10px] font-semibold">
+                    {cell.status === 'present' && (
+                      <span className={cell.isPaid ? 'text-emerald-700' : 'text-emerald-600'}>
+                        {cell.isPaid ? 'Paid' : 'Unpaid'}
+                      </span>
+                    )}
+                    {cell.status === 'absent' && <span className="text-red-600">Absent</span>}
+                    {!cell.status && <span className="text-slate-400">Unmarked</span>}
                   </div>
                 </div>
               );
