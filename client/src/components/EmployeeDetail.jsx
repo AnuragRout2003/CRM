@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API = '/api';
+const DASHBOARD_CACHE_KEY = 'rout-dashboard-cache-v1';
+const ATTENDANCE_CACHE_PREFIX = 'rout-attendance-week';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -59,6 +61,17 @@ export default function EmployeeDetail() {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const clearListCaches = () => {
+    try {
+      window.localStorage.removeItem(DASHBOARD_CACHE_KEY);
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith(ATTENDANCE_CACHE_PREFIX))
+        .forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+      // If local storage is unavailable, the server data is still correct.
+    }
   };
 
   const applyDetailResponse = (data) => {
@@ -302,6 +315,7 @@ export default function EmployeeDetail() {
     setSavingAction('delete');
     try {
       await axios.delete(`${API}/employees/${id}`);
+      clearListCaches();
       showToast(`${employee.name} deleted`);
       setTimeout(() => navigate('/'), 800);
     } catch {
