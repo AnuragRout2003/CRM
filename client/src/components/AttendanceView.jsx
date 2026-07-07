@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 
 const API_EMPLOYEES = '/api/employees';
@@ -10,6 +10,8 @@ export default function AttendanceView() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
+  const attendanceRequestSeq = useRef(0);
+  const latestAttendanceRequests = useRef(new Map());
 
   // currentBaseDate tracks which week we are viewing.
   const [currentBaseDate, setCurrentBaseDate] = useState(() => {
@@ -134,6 +136,41 @@ export default function AttendanceView() {
     return 'unmarked';
   };
 
+  const updateAttendanceMapForDate = (prev, empId, date, status, paidAmount) => {
+    const { monthKey, dayKey } = getDateKeys(date);
+    const currentRecord = prev[empId] || { employee: empId, attendance: {}, paidAttendance: {} };
+    const attendance = { ...(currentRecord.attendance || {}) };
+    const monthAttendance = { ...(attendance[monthKey] || {}) };
+    const paidAttendance = { ...(currentRecord.paidAttendance || {}) };
+    const monthPaidAttendance = { ...(paidAttendance[monthKey] || {}) };
+
+    if (!status || status === 'unmarked') {
+      delete monthAttendance[dayKey];
+    } else {
+      monthAttendance[dayKey] = status;
+    }
+    attendance[monthKey] = monthAttendance;
+
+    if (paidAmount !== undefined) {
+      if (paidAmount > 0) {
+        monthPaidAttendance[dayKey] = paidAmount;
+      } else {
+        delete monthPaidAttendance[dayKey];
+      }
+      paidAttendance[monthKey] = monthPaidAttendance;
+    }
+
+    return {
+      ...prev,
+      [empId]: {
+        ...currentRecord,
+        employee: currentRecord.employee || empId,
+        attendance,
+        paidAttendance,
+      },
+    };
+  };
+
   const handleCellClick = async (emp, date) => {
     const { isLocked } = getCellInfo(emp, date);
     if (isLocked) return;
@@ -141,29 +178,14 @@ export default function AttendanceView() {
     const empId = emp._id;
     const currentStatus = getStatus(empId, date);
     const nextStatus = getNextStatus(currentStatus);
-    const { fullDateStr } = getDateKeys(date);
+    const { monthKey, dayKey, fullDateStr } = getDateKeys(date);
+    const requestKey = `${empId}:${fullDateStr}`;
+    const requestId = attendanceRequestSeq.current + 1;
+    attendanceRequestSeq.current = requestId;
+    latestAttendanceRequests.current.set(requestKey, requestId);
 
     try {
-      // Optimistic update
-      setAttendanceMap((prev) => {
-        const newMap = { ...prev };
-        if (!newMap[empId]) {
-          newMap[empId] = { employee: empId, attendance: {} };
-        }
-        const record = { ...newMap[empId], attendance: { ...newMap[empId].attendance } };
-        const { monthKey, dayKey } = getDateKeys(date);
-        
-        if (!record.attendance[monthKey]) record.attendance[monthKey] = {};
-        
-        if (nextStatus === 'unmarked') {
-          delete record.attendance[monthKey][dayKey];
-        } else {
-          record.attendance[monthKey][dayKey] = nextStatus;
-        }
-        
-        newMap[empId] = record;
-        return newMap;
-      });
+      setAttendanceMap((prev) => updateAttendanceMapForDate(prev, empId, date, nextStatus));
 
       // API call
       const res = await axios.put(`${API_ATTENDANCE}/employee/${empId}/mark`, {
@@ -171,12 +193,16 @@ export default function AttendanceView() {
         status: nextStatus,
       });
 
-      // Sync with real server response
-      setAttendanceMap((prev) => ({
-        ...prev,
-        [empId]: res.data,
-      }));
+      if (latestAttendanceRequests.current.get(requestKey) !== requestId) return;
+
+      latestAttendanceRequests.current.delete(requestKey);
+      const serverStatus = res.data?.attendance?.[monthKey]?.[dayKey] || null;
+      const serverPaidAmount = res.data?.paidAttendance?.[monthKey]?.[dayKey] || 0;
+      setAttendanceMap((prev) => updateAttendanceMapForDate(prev, empId, date, serverStatus, serverPaidAmount));
     } catch {
+      if (latestAttendanceRequests.current.get(requestKey) !== requestId) return;
+
+      latestAttendanceRequests.current.delete(requestKey);
       showToast('Failed to update attendance', 'error');
       fetchData(); // rollback
     }
