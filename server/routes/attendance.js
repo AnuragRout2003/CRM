@@ -7,6 +7,7 @@ const {
   dateFromKey,
   buildAttendanceRecordForEmployee,
   getAllAttendanceRecords,
+  getWeeklyAttendancePayload,
   getAttendanceDaysForEmployee,
   rebuildPaidAmountsForEmployee,
 } = require('../utils/payroll');
@@ -25,6 +26,29 @@ router.get('/', async (req, res) => {
   try {
     const records = await getAllAttendanceRecords();
     res.json(records);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET lightweight weekly attendance dashboard payload.
+router.get('/dashboard', async (req, res) => {
+  try {
+    const { weekStart } = req.query;
+    if (!weekStart) {
+      return res.status(400).json({ error: 'weekStart is required' });
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      return res.status(400).json({ error: 'weekStart must be YYYY-MM-DD' });
+    }
+
+    const startKey = toDateKey(`${weekStart}T00:00:00`);
+    const endDate = dateFromKey(startKey);
+    endDate.setDate(endDate.getDate() + 6);
+    const endKey = toDateKey(endDate);
+    const payload = await getWeeklyAttendancePayload(startKey, endKey);
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

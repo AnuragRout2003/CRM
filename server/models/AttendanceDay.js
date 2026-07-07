@@ -47,6 +47,7 @@ attendanceDaySchema.virtual('paidStatus').get(function () {
 });
 
 attendanceDaySchema.index({ employee: 1, dateKey: 1 }, { unique: true });
+attendanceDaySchema.index({ dateKey: 1, employee: 1 });
 
 attendanceDaySchema.set('toJSON', { virtuals: true });
 attendanceDaySchema.set('toObject', { virtuals: true });

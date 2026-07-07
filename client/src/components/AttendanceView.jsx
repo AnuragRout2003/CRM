@@ -1,17 +1,96 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 
-const API_EMPLOYEES = '/api/employees';
 const API_ATTENDANCE = '/api/attendance';
+const ATTENDANCE_CACHE_PREFIX = 'rout-attendance-week';
+
+const getLocalDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getWeekCacheKey = (weekStart) => `${ATTENDANCE_CACHE_PREFIX}-${weekStart}`;
+
+function AttendanceSkeleton() {
+  return (
+    <div className="flex-1 p-4 md:p-8 max-w-full animate-pulse">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="h-8 w-64 rounded-lg bg-slate-200" />
+          <div className="mt-2 h-4 w-72 max-w-full rounded bg-slate-100" />
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="h-10 w-full rounded-xl bg-slate-100 sm:w-[220px]" />
+          <div className="h-10 w-64 rounded-xl bg-slate-100" />
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="h-5 w-52 rounded bg-slate-200" />
+            <div className="mt-2 h-3 w-36 rounded bg-slate-100" />
+          </div>
+          <div className="h-4 w-56 rounded bg-slate-100" />
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
+          <div className="min-w-[1040px]">
+            <div className="grid grid-cols-[200px_repeat(7,minmax(120px,1fr))] border-b border-slate-100 bg-slate-50">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="px-4 py-4">
+                  <div className="h-3 rounded bg-slate-200" />
+                </div>
+              ))}
+            </div>
+            {Array.from({ length: 7 }).map((_, rowIndex) => (
+              <div key={rowIndex} className="grid grid-cols-[200px_repeat(7,minmax(120px,1fr))] border-b border-slate-100">
+                <div className="flex items-center gap-3 px-4 py-4">
+                  <div className="h-7 w-7 rounded-full bg-slate-200" />
+                  <div className="h-4 w-28 rounded bg-slate-100" />
+                </div>
+                {Array.from({ length: 7 }).map((_, index) => (
+                  <div key={index} className="px-4 py-4">
+                    <div className="mx-auto h-7 w-12 rounded bg-slate-100" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="divide-y divide-slate-100 md:hidden">
+          {Array.from({ length: 5 }).map((_, rowIndex) => (
+            <div key={rowIndex} className="px-4 py-4">
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-full bg-slate-200" />
+                <div className="h-4 w-32 rounded bg-slate-100" />
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {Array.from({ length: 7 }).map((_, index) => (
+                  <div key={index} className="h-12 rounded-lg bg-slate-100" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AttendanceView() {
   const [employees, setEmployees] = useState([]);
   const [attendanceMap, setAttendanceMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
   const attendanceRequestSeq = useRef(0);
   const latestAttendanceRequests = useRef(new Map());
+  const weekRequestSeq = useRef(0);
 
   // currentBaseDate tracks which week we are viewing.
   const [currentBaseDate, setCurrentBaseDate] = useState(() => {
@@ -37,6 +116,8 @@ export default function AttendanceView() {
     }
     return dates;
   }, [currentBaseDate]);
+  const weekStartKey = useMemo(() => getLocalDateKey(weekDates[0]), [weekDates]);
+  const weekEndKey = useMemo(() => getLocalDateKey(weekDates[6]), [weekDates]);
 
   const filteredEmployees = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -46,26 +127,78 @@ export default function AttendanceView() {
   }, [employees, search]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const cachedAttendance = getCachedAttendance(weekStartKey);
+    if (cachedAttendance) {
+      applyAttendancePayload(cachedAttendance);
+      setLoading(false);
+    }
+    fetchData(weekStartKey, Boolean(cachedAttendance));
+  }, [weekStartKey]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const getCachedAttendance = (weekStart) => {
     try {
-      const empRes = await axios.get(API_EMPLOYEES);
-      setEmployees(empRes.data);
-
-      const attRes = await axios.get(API_ATTENDANCE);
-      // Backend returns all attendance records in an array
-      const attMap = {};
-      attRes.data.forEach((record) => {
-        attMap[record.employee] = record;
-      });
-      setAttendanceMap(attMap);
+      const cached = window.localStorage.getItem(getWeekCacheKey(weekStart));
+      return cached ? JSON.parse(cached) : null;
     } catch {
+      return null;
+    }
+  };
+
+  const cacheAttendance = (weekStart, payload) => {
+    try {
+      window.localStorage.setItem(getWeekCacheKey(weekStart), JSON.stringify(payload));
+    } catch {
+      // Browser storage can be unavailable or full; the live request still works.
+    }
+  };
+
+  const applyAttendancePayload = (payload) => {
+    setEmployees(payload.employees || []);
+
+    const attMap = {};
+    (payload.attendance || []).forEach((record) => {
+      attMap[record.employee] = record;
+    });
+    setAttendanceMap(attMap);
+  };
+
+  const cacheCurrentAttendance = (nextMap) => {
+    cacheAttendance(weekStartKey, {
+      employees,
+      attendance: Object.values(nextMap),
+      weekStart: weekStartKey,
+      weekEnd: weekEndKey,
+      generatedAt: new Date().toISOString(),
+    });
+  };
+
+  const fetchData = async (weekStart = weekStartKey, hasCachedAttendance = false) => {
+    const requestId = weekRequestSeq.current + 1;
+    weekRequestSeq.current = requestId;
+
+    if (hasCachedAttendance) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const res = await axios.get(`${API_ATTENDANCE}/dashboard`, {
+        params: { weekStart },
+      });
+
+      if (weekRequestSeq.current !== requestId) return;
+
+      applyAttendancePayload(res.data);
+      cacheAttendance(weekStart, res.data);
+    } catch {
+      if (weekRequestSeq.current !== requestId) return;
       showToast('Failed to load data', 'error');
     } finally {
-      setLoading(false);
+      if (weekRequestSeq.current === requestId) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -104,13 +237,12 @@ export default function AttendanceView() {
 
   // Helper to extract YYYY-MM and DD
   const getDateKeys = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const fullDateStr = getLocalDateKey(date);
+    const [year, month, day] = fullDateStr.split('-');
     return {
       monthKey: `${year}-${month}`,
       dayKey: day,
-      fullDateStr: `${year}-${month}-${day}`
+      fullDateStr
     };
   };
 
@@ -185,7 +317,11 @@ export default function AttendanceView() {
     latestAttendanceRequests.current.set(requestKey, requestId);
 
     try {
-      setAttendanceMap((prev) => updateAttendanceMapForDate(prev, empId, date, nextStatus));
+      setAttendanceMap((prev) => {
+        const nextMap = updateAttendanceMapForDate(prev, empId, date, nextStatus);
+        cacheCurrentAttendance(nextMap);
+        return nextMap;
+      });
 
       // API call
       const res = await axios.put(`${API_ATTENDANCE}/employee/${empId}/mark`, {
@@ -198,13 +334,17 @@ export default function AttendanceView() {
       latestAttendanceRequests.current.delete(requestKey);
       const serverStatus = res.data?.attendance?.[monthKey]?.[dayKey] || null;
       const serverPaidAmount = res.data?.paidAttendance?.[monthKey]?.[dayKey] || 0;
-      setAttendanceMap((prev) => updateAttendanceMapForDate(prev, empId, date, serverStatus, serverPaidAmount));
+      setAttendanceMap((prev) => {
+        const nextMap = updateAttendanceMapForDate(prev, empId, date, serverStatus, serverPaidAmount);
+        cacheCurrentAttendance(nextMap);
+        return nextMap;
+      });
     } catch {
       if (latestAttendanceRequests.current.get(requestKey) !== requestId) return;
 
       latestAttendanceRequests.current.delete(requestKey);
       showToast('Failed to update attendance', 'error');
-      fetchData(); // rollback
+      fetchData(weekStartKey, true); // rollback
     }
   };
 
@@ -228,14 +368,7 @@ export default function AttendanceView() {
   };
 
   if (loading) {
-    return (
-      <div className="flex-1 p-4 md:p-8">
-        <div className="flex flex-col items-center justify-center gap-4 py-20">
-          <div className="spinner" />
-          <span className="text-sm font-medium text-slate-500 animate-pulse">Loading attendance matrix...</span>
-        </div>
-      </div>
-    );
+    return <AttendanceSkeleton />;
   }
 
   return (
@@ -243,6 +376,14 @@ export default function AttendanceView() {
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.message}</div>
+        </div>
+      )}
+
+      {refreshing && (
+        <div className="mb-4">
+          <span className="inline-flex w-fit items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-600">
+            Refreshing latest attendance...
+          </span>
         </div>
       )}
 

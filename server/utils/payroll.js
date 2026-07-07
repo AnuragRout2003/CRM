@@ -294,6 +294,43 @@ const getAllAttendanceRecords = async () => {
   });
 };
 
+const getWeeklyAttendancePayload = async (weekStart, weekEnd) => {
+  await migrateAllLegacyAttendance();
+
+  const [employees, days] = await Promise.all([
+    Employee.find().select('name profilePicture paidTillDate').sort({ name: 1 }),
+    AttendanceDay.find({
+      dateKey: {
+        $gte: weekStart,
+        $lte: weekEnd,
+      },
+    }).sort({ employee: 1, dateKey: 1 }),
+  ]);
+
+  const daysByEmployee = new Map();
+  days.forEach((day) => {
+    const employeeId = String(day.employee);
+    if (!daysByEmployee.has(employeeId)) daysByEmployee.set(employeeId, []);
+    daysByEmployee.get(employeeId).push(day);
+  });
+
+  return {
+    employees: employees.map((employee) => employee.toObject({ virtuals: false })),
+    attendance: employees.map((employee) => {
+      const employeeDays = daysByEmployee.get(String(employee._id)) || [];
+      return {
+        employee: employee._id,
+        employeeName: employee.name,
+        attendance: buildAttendanceMap(employeeDays),
+        paidAttendance: buildPaidAttendanceMap(employeeDays),
+      };
+    }),
+    weekStart,
+    weekEnd,
+    generatedAt: new Date(),
+  };
+};
+
 const groupByEmployee = (items) => {
   const grouped = new Map();
   items.forEach((item) => {
@@ -463,6 +500,7 @@ module.exports = {
   buildAttendanceMap,
   buildAttendanceRecordForEmployee,
   getAllAttendanceRecords,
+  getWeeklyAttendancePayload,
   getDashboardPayload,
   getAttendanceDaysForEmployee,
   rebuildPaidAmountsForEmployee,
