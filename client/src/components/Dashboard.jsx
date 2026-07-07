@@ -4,37 +4,128 @@ import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 const API = '/api';
+const DASHBOARD_CACHE_KEY = 'rout-dashboard-cache-v1';
+
+function DashboardSkeleton() {
+  const statCards = Array.from({ length: 4 });
+  const rows = Array.from({ length: 6 });
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 animate-pulse">
+      <div className="mb-6">
+        <div className="h-8 w-64 rounded-lg bg-slate-200" />
+        <div className="mt-2 h-4 w-80 max-w-full rounded bg-slate-100" />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        {statCards.map((_, index) => (
+          <div key={index} className="bg-white border border-slate-200 rounded-xl p-4 lg:p-5 shadow-sm">
+            <div className="h-7 w-7 rounded bg-slate-100" />
+            <div className="mt-4 h-3 w-28 rounded bg-slate-100" />
+            <div className="mt-3 h-7 w-20 rounded bg-slate-200" />
+            <div className="mt-3 h-2 w-full rounded-full bg-slate-100" />
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl p-4 lg:p-6 shadow-sm mb-6">
+        <div className="h-5 w-48 rounded bg-slate-200 mb-6" />
+        <div className="flex h-48 lg:h-64 items-end gap-3">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="flex flex-1 items-end gap-1">
+              <div className="w-full rounded-t bg-emerald-100" style={{ height: `${35 + index * 7}%` }} />
+              <div className="w-full rounded-t bg-red-100" style={{ height: `${55 - index * 5}%` }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between p-4 lg:px-6 lg:py-4 border-b border-slate-100">
+          <div className="h-5 w-32 rounded bg-slate-200" />
+          <div className="h-10 w-60 rounded-lg bg-slate-100" />
+        </div>
+        <div className="divide-y divide-slate-100">
+          {rows.map((_, index) => (
+            <div key={index} className="flex items-center gap-4 px-4 lg:px-6 py-4">
+              <div className="h-10 w-10 rounded-full bg-slate-200" />
+              <div className="min-w-0 flex-1">
+                <div className="h-4 w-36 rounded bg-slate-200" />
+                <div className="mt-2 h-3 w-24 rounded bg-slate-100" />
+              </div>
+              <div className="hidden sm:block h-6 w-20 rounded-full bg-slate-100" />
+              <div className="hidden md:block h-6 w-24 rounded bg-slate-100" />
+              <div className="h-6 w-16 rounded-full bg-slate-100" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [attendanceMap, setAttendanceMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState(null);
   const [editingWage, setEditingWage] = useState({ id: null, value: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAll();
+    const cachedDashboard = getCachedDashboard();
+    if (cachedDashboard) {
+      applyDashboardPayload(cachedDashboard);
+      setLoading(false);
+    }
+    fetchAll(Boolean(cachedDashboard));
   }, []);
 
-  const fetchAll = async () => {
+  const getCachedDashboard = () => {
     try {
-      const [empRes, attRes] = await Promise.all([
-        axios.get(`${API}/employees`),
-        axios.get(`${API}/attendance`),
-      ]);
-      setEmployees(empRes.data);
+      const cached = window.localStorage.getItem(DASHBOARD_CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  };
 
-      const attMap = {};
-      attRes.data.forEach((record) => {
-        attMap[record.employee] = record;
-      });
-      setAttendanceMap(attMap);
+  const cacheDashboard = (payload) => {
+    try {
+      window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(payload));
+    } catch {
+      // Local storage can fail in private browsing or when storage is full.
+    }
+  };
+
+  const applyDashboardPayload = (payload) => {
+    setEmployees(payload.employees || []);
+
+    const attMap = {};
+    (payload.attendance || []).forEach((record) => {
+      attMap[record.employee] = record;
+    });
+    setAttendanceMap(attMap);
+  };
+
+  const fetchAll = async (hasCachedDashboard = false) => {
+    if (hasCachedDashboard) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const res = await axios.get(`${API}/dashboard`);
+      applyDashboardPayload(res.data);
+      cacheDashboard(res.data);
     } catch {
       showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -59,6 +150,7 @@ export default function Dashboard() {
       setEmployees(prev => prev.map(e => e._id === empId ? { ...e, dailyWage: newWage } : e));
       setEditingWage({ id: null, value: '' });
       showToast('Daily wage updated!');
+      fetchAll(true);
     } catch {
       showToast('Failed to update wage', 'error');
       setEditingWage({ id: null, value: '' });
@@ -116,7 +208,6 @@ export default function Dashboard() {
   const today = new Date();
   const todayMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const todayDayStr = String(today.getDate()).padStart(2, '0');
-  const todayDateStr = `${todayMonthKey}-${todayDayStr}`;
 
   const filtered = employees
     .filter((e) => e.name.toLowerCase().includes(search.toLowerCase()))
@@ -170,12 +261,7 @@ export default function Dashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="spinner" />
-        <span className="text-slate-500 text-sm font-medium animate-pulse">Loading employees...</span>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -183,6 +269,14 @@ export default function Dashboard() {
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.message}</div>
+        </div>
+      )}
+
+      {refreshing && (
+        <div className="mb-4">
+          <span className="inline-flex w-fit items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-600">
+            Refreshing latest data...
+          </span>
         </div>
       )}
 

@@ -294,6 +294,85 @@ const getAllAttendanceRecords = async () => {
   });
 };
 
+const groupByEmployee = (items) => {
+  const grouped = new Map();
+  items.forEach((item) => {
+    const employeeId = String(item.employee);
+    if (!grouped.has(employeeId)) grouped.set(employeeId, []);
+    grouped.get(employeeId).push(item);
+  });
+  return grouped;
+};
+
+const getDashboardPayload = async () => {
+  await migrateAllLegacyAttendance();
+
+  const employees = await Employee.find().sort({ createdAt: -1 });
+  await Promise.all(employees.map((employee) => migrateLegacyTransactionsForEmployee(employee)));
+
+  const [days, payments, advanceTransactions] = await Promise.all([
+    AttendanceDay.find({}).sort({ employee: 1, dateKey: 1 }),
+    SalaryPayment.find({}).sort({ employee: 1, date: 1, createdAt: 1 }),
+    AdvanceTransaction.find({}).sort({ employee: 1, date: 1, createdAt: 1 }),
+  ]);
+
+  const daysByEmployee = groupByEmployee(days);
+  const paymentsByEmployee = groupByEmployee(payments);
+  const advancesByEmployee = groupByEmployee(advanceTransactions);
+
+  const attendance = employees.map((employee) => {
+    const employeeDays = daysByEmployee.get(String(employee._id)) || [];
+    return {
+      employee: employee._id,
+      employeeName: employee.name,
+      attendance: buildAttendanceMap(employeeDays),
+      paidAttendance: buildPaidAttendanceMap(employeeDays),
+    };
+  });
+
+  const employeePayload = employees.map((employee) => {
+    const employeeDays = daysByEmployee.get(String(employee._id)) || [];
+    const employeePayments = paymentsByEmployee.get(String(employee._id)) || [];
+    const employeeAdvances = advancesByEmployee.get(String(employee._id)) || [];
+    const presentDays = employeeDays.filter((day) => day.status === 'present');
+    const totalEarned = presentDays.reduce((sum, day) => sum + (day.wageForThatDay || employee.dailyWage || 0), 0);
+    const salarySettled = employeePayments.reduce(
+      (sum, payment) => sum + (payment.grossSettled ?? ((payment.amount || 0) + (payment.advanceDeducted || 0))),
+      0
+    );
+    const fullyPaidPresentDays = presentDays.filter((day) => (day.paidAmount || 0) >= (day.wageForThatDay || employee.dailyWage || 0));
+    const paidTillDate = fullyPaidPresentDays.length
+      ? fullyPaidPresentDays[fullyPaidPresentDays.length - 1].date
+      : null;
+    const partialPaidDays = presentDays.reduce((sum, day) => {
+      const wage = day.wageForThatDay || employee.dailyWage || 0;
+      if (!wage || (day.paidAmount || 0) <= 0 || (day.paidAmount || 0) >= wage) return sum;
+      return sum + (day.paidAmount || 0) / wage;
+    }, 0);
+    const totalAdvance = employeeAdvances.reduce((sum, tx) => {
+      const amount = tx.type === 'DEDUCTED' ? -Math.abs(tx.amount) : Math.abs(tx.amount);
+      return sum + amount;
+    }, 0);
+    const plainEmployee = employee.toObject({ virtuals: false });
+    const { payments: _legacyPayments, advances: _legacyAdvances, ...dashboardEmployee } = plainEmployee;
+
+    return {
+      ...dashboardEmployee,
+      totalPayment: employeePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0),
+      totalAdvance,
+      paidTillDate,
+      partialPaidDays,
+      remainingSalary: Math.max(0, totalEarned - salarySettled),
+    };
+  });
+
+  return {
+    employees: employeePayload,
+    attendance,
+    generatedAt: new Date(),
+  };
+};
+
 const getEmployeePayrollSnapshot = async (employee, { rebuildPaidAmounts = false } = {}) => {
   await Promise.all([
     migrateLegacyTransactionsForEmployee(employee),
@@ -384,6 +463,7 @@ module.exports = {
   buildAttendanceMap,
   buildAttendanceRecordForEmployee,
   getAllAttendanceRecords,
+  getDashboardPayload,
   getAttendanceDaysForEmployee,
   rebuildPaidAmountsForEmployee,
   getEmployeePayrollSnapshot,
