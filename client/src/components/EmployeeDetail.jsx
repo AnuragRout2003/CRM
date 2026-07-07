@@ -638,23 +638,34 @@ export default function EmployeeDetail() {
 
               return (
                 <div key={cell.key} className={`calendar-cell ${statusClass} ${cell.isToday ? 'today' : ''}`}>
-                  <span className="text-[11px] md:text-xs font-bold text-slate-700">{cell.day}</span>
+                  <span className="text-[11px] md:text-xs font-bold text-slate-700 leading-none">{cell.day}</span>
 
                   {/* Markers for payment / advance */}
-                  <div className="flex gap-0.5">
+                  <div className="absolute right-0.5 top-0.5 flex max-w-[32px] flex-wrap justify-end gap-0.5 text-[8px] leading-none md:static md:max-w-none md:flex-nowrap md:text-[10px]">
                     {cell.hasPayment && <span className="text-[10px]" title="Payment made">💰</span>}
                     {cell.hasAdvance && <span className="text-[10px]" title="Advance given">📤</span>}
                     {cell.isPaid && <span className="text-[10px]" title="Paid">✅</span>}
                   </div>
 
-                  <div className="mt-auto text-[10px] font-semibold">
+                  <div className="mt-auto max-w-full text-[10px] font-semibold leading-none">
                     {cell.status === 'present' && (
                       <span className={cell.isPaid ? 'text-emerald-700' : 'text-emerald-600'}>
-                        {cell.isPaid ? 'Paid' : 'Unpaid'}
+                        <span className="md:hidden">{cell.isPaid ? 'Pd' : 'P'}</span>
+                        <span className="hidden md:inline">{cell.isPaid ? 'Paid' : 'Unpaid'}</span>
                       </span>
                     )}
-                    {cell.status === 'absent' && <span className="text-red-600">Absent</span>}
-                    {!cell.status && <span className="text-slate-400">Unmarked</span>}
+                    {cell.status === 'absent' && (
+                      <span className="text-red-600">
+                        <span className="md:hidden">A</span>
+                        <span className="hidden md:inline">Absent</span>
+                      </span>
+                    )}
+                    {!cell.status && (
+                      <span className="text-slate-400">
+                        <span className="md:hidden">-</span>
+                        <span className="hidden md:inline">Unmarked</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               );
