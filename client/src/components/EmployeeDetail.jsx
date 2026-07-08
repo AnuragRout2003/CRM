@@ -11,6 +11,7 @@ const MONTH_NAMES = [
   'July','August','September','October','November','December',
 ];
 const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const TRANSACTION_HISTORY_LIMIT = 10;
 
 export default function EmployeeDetail() {
   const { id } = useParams();
@@ -229,6 +230,17 @@ export default function EmployeeDetail() {
       })
       .reverse();
   }, [employee]);
+
+  const recentPayments = useMemo(() => {
+    if (!employee?.payments) return [];
+    return [...employee.payments]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, TRANSACTION_HISTORY_LIMIT);
+  }, [employee]);
+
+  const recentAdvanceLedger = useMemo(() => {
+    return advanceLedger.slice(0, TRANSACTION_HISTORY_LIMIT);
+  }, [advanceLedger]);
 
   // ── Handlers ─────────────────────────────────
 
@@ -699,7 +711,9 @@ export default function EmployeeDetail() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 md:px-6 md:py-4 border-b border-emerald-100 bg-emerald-50/40 flex justify-between items-center">
             <h2 className="text-base md:text-lg font-semibold text-slate-800">Payment History</h2>
-            <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">{employee.payments?.length || 0}</span>
+            <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">
+              {recentPayments.length}{(employee.payments?.length || 0) > TRANSACTION_HISTORY_LIMIT ? ` of ${employee.payments.length}` : ''}
+            </span>
           </div>
           {employee.payments?.length ? (
             <>
@@ -716,7 +730,7 @@ export default function EmployeeDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...employee.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p, i) => (
+                    {recentPayments.map((p, i) => (
                       <tr key={p._id || i} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-3 text-slate-400">{i + 1}</td>
                         <td className="px-4 py-3">
@@ -740,7 +754,7 @@ export default function EmployeeDetail() {
               </div>
               {/* Mobile Cards */}
               <div className="md:hidden divide-y divide-slate-100">
-                {[...employee.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p, i) => (
+                {recentPayments.map((p, i) => (
                   <div key={p._id || i} className="p-4 space-y-1.5">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400 font-medium">#{i + 1}</span>
@@ -771,7 +785,9 @@ export default function EmployeeDetail() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 md:px-6 md:py-4 border-b border-amber-100 bg-amber-50/50 flex justify-between items-center">
             <h2 className="text-base md:text-lg font-semibold text-slate-800">Advance History</h2>
-            <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-bold">{employee.advances?.length || 0}</span>
+            <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-bold">
+              {recentAdvanceLedger.length}{(employee.advances?.length || 0) > TRANSACTION_HISTORY_LIMIT ? ` of ${employee.advances.length}` : ''}
+            </span>
           </div>
           {employee.advances?.length ? (
             <>
@@ -787,7 +803,7 @@ export default function EmployeeDetail() {
                     <span className="text-center">Method</span>
                   </div>
                   <div className="divide-y divide-slate-100">
-                    {advanceLedger.map((a, i) => (
+                    {recentAdvanceLedger.map((a, i) => (
                       <div key={a._id || i} className="grid grid-cols-[48px_minmax(180px,1.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] items-center gap-4 px-4 py-3 text-sm hover:bg-slate-50/60 transition-colors">
                         <span className="text-slate-400">{i + 1}</span>
                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium justify-self-start whitespace-nowrap">{formatDate(a.date)}</span>
@@ -807,7 +823,7 @@ export default function EmployeeDetail() {
               </div>
               {/* Mobile Cards */}
               <div className="md:hidden divide-y divide-slate-100">
-                {advanceLedger.map((a, i) => (
+                {recentAdvanceLedger.map((a, i) => (
                   <div key={a._id || i} className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400 font-medium">#{i + 1}</span>
